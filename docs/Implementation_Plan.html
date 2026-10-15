@@ -1,0 +1,990 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voyage Atlas 구현 계획</title>
+<meta name="description" content="나의 여정 지도(Voyage Atlas)의 Phase 0~6 단계별 구현 계획, 완료 기준, 추천 커밋">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=Noto+Serif+KR:wght@700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-sans:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  --font-display:"Fraunces","Noto Serif KR",Georgia,serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --bg:#070B1F; --bg-2:#0E1538;
+  --bg-nebula-1:rgba(155,93,229,.20); --bg-nebula-2:rgba(46,196,182,.12);
+  --panel:rgba(17,24,58,.72); --panel-2:#19224D; --panel-3:#222C5C;
+  --line:rgba(232,201,138,.18); --line-2:rgba(255,255,255,.08);
+  --gold:#E8C98A; --gold-strong:#F6DFAE; --gold-deep:#B8893E; --on-gold:#1A1408;
+  --v1:#2EC4B6; --v2:#4C8DFF; --v3:#9B5DE5; --v4:#F15BB5; --wish:#FFD166;
+  --text:#F5F1E8; --text-dim:#B3BAD8; --text-faint:#8089B0;
+  --shadow:0 24px 64px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#F3EADA; --bg-2:#EADDC4;
+    --bg-nebula-1:rgba(201,52,143,.08); --bg-nebula-2:rgba(15,143,132,.08);
+    --panel:rgba(255,250,240,.84); --panel-2:#F6EEDD; --panel-3:#EDE2CB;
+    --line:rgba(122,90,36,.24); --line-2:rgba(60,40,10,.10);
+    --gold:#8A6420; --gold-strong:#6E4E14; --gold-deep:#8A6420; --on-gold:#FFF9EE;
+    --v1:#0F8F84; --v2:#2F67D8; --v3:#7A3FC4; --v4:#C9348F; --wish:#C98A00;
+    --text:#2B2418; --text-dim:#5E5240; --text-faint:#7A6C55;
+    --shadow:0 20px 50px rgba(80,60,20,.18);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#F3EADA; --bg-2:#EADDC4;
+  --bg-nebula-1:rgba(201,52,143,.08); --bg-nebula-2:rgba(15,143,132,.08);
+  --panel:rgba(255,250,240,.84); --panel-2:#F6EEDD; --panel-3:#EDE2CB;
+  --line:rgba(122,90,36,.24); --line-2:rgba(60,40,10,.10);
+  --gold:#8A6420; --gold-strong:#6E4E14; --gold-deep:#8A6420; --on-gold:#FFF9EE;
+  --v1:#0F8F84; --v2:#2F67D8; --v3:#7A3FC4; --v4:#C9348F; --wish:#C98A00;
+  --text:#2B2418; --text-dim:#5E5240; --text-faint:#7A6C55;
+  --shadow:0 20px 50px rgba(80,60,20,.18);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;font-family:var(--font-sans);color:var(--text);line-height:1.6;word-break:keep-all;
+  background:var(--bg);
+  background-image:radial-gradient(900px 600px at 10% -5%,var(--bg-nebula-1),transparent 60%),
+    radial-gradient(800px 600px at 100% 30%,var(--bg-nebula-2),transparent 60%),
+    linear-gradient(180deg,var(--bg-2),var(--bg) 480px);
+  background-attachment:fixed}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;max-width:1280px;margin:0 auto;padding:32px 24px 80px}
+nav.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;padding:20px}
+.toc .eyebrow{margin-bottom:12px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc a{display:block;padding:7px 10px;border-radius:10px;color:var(--text-dim);text-decoration:none;font-size:14px}
+.toc a:hover{background:var(--panel-2);color:var(--text)}
+.toc a.active{color:var(--gold-strong);background:var(--panel-2)}
+.glass{background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);
+  backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+header.hero{padding:8px 4px 20px}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(28px,4vw,44px);letter-spacing:-.02em;line-height:1.2;margin:10px 0 18px}
+h1 .gold{background:linear-gradient(180deg,var(--gold-strong),var(--gold) 55%,var(--gold-deep));-webkit-background-clip:text;background-clip:text;color:transparent}
+.phases{list-style:none;margin:0 0 24px;padding:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+.phases li{position:relative;padding:14px 12px;border-radius:18px;background:var(--panel);border:1px solid var(--line-2);display:flex;flex-direction:column;gap:4px;min-width:0}
+.phases li:nth-child(-n+5){border-color:var(--line)}
+.ph-num{font-family:var(--font-display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums lining-nums;
+  background:linear-gradient(180deg,var(--gold-strong),var(--gold-deep));-webkit-background-clip:text;background-clip:text;color:transparent}
+.phases li:nth-child(n+6) .ph-num{background:none;color:var(--text-faint)}
+.ph-name{font-weight:700;font-size:14px;line-height:1.35}
+.ph-m{font-family:var(--font-mono);font-size:11px;color:var(--text-faint)}
+.card{padding:28px 32px;margin-bottom:24px}
+h2{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:-.01em;margin:0 0 16px;line-height:1.3}
+h3{font-size:18px;font-weight:700;margin:26px 0 10px;color:var(--gold-strong)}
+p,li{font-size:15px}
+p{margin:10px 0}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+strong{color:var(--text)}
+a{color:var(--gold-strong)}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--panel-2);border:1px solid var(--line-2);border-radius:6px;padding:1px 6px;word-break:break-all}
+pre{background:var(--panel-2);border:1px solid var(--line-2);border-radius:14px;padding:16px 18px;overflow:auto}
+pre code{background:none;border:0;padding:0;font-size:13px;line-height:1.6;word-break:normal}
+blockquote{margin:14px 0;padding:12px 16px;border-left:3px solid var(--wish);background:var(--panel-2);border-radius:0 12px 12px 0;color:var(--text-dim)}
+blockquote p{margin:4px 0}
+.table-wrap{overflow-x:auto;margin:12px 0 18px;border:1px solid var(--line-2);border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line-2)}
+th{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--gold);background:var(--panel-2);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td:first-child{white-space:nowrap}
+.meta{max-width:760px}
+.meta td:first-child{color:var(--text-dim)}
+.theme-btn{position:fixed;right:20px;bottom:20px;height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);font:600 13px var(--font-sans);cursor:pointer;box-shadow:var(--shadow);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.theme-btn:hover{transform:translateY(-1px)}
+:focus-visible{outline:2px solid var(--gold-strong);outline-offset:3px}
+@media (max-width:980px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  nav.toc{position:static;max-height:none}
+  .toc ol{display:flex;flex-wrap:wrap;gap:2px}
+  .toc a{padding:4px 10px;font-size:13px}
+  .phases{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  .layout{padding:20px 16px 80px;gap:16px}
+  nav.toc{display:none}
+  .card{padding:20px 18px;border-radius:20px}
+  .phases{grid-template-columns:repeat(2,minmax(0,1fr))}
+  h2{font-size:22px}
+  table{min-width:600px}
+  .meta table{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.theme-btn:hover{transform:none}}
+@media print{body{background:#fff;color:#000}.glass{box-shadow:none;backdrop-filter:none}nav.toc,.theme-btn{display:none}.layout{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc glass" aria-label="목차">
+    <div class="eyebrow">CONTENTS</div>
+    <ol><li><a href="#s1">1. 이번 계획에 반영한 결정 사항</a></li><li><a href="#s2">2. 공통 원칙</a></li><li><a href="#s3">3. 최종 폴더 구조</a></li><li><a href="#s4">4. 단계별 구현 계획 한눈에 보기</a></li><li><a href="#s5">5. Phase 0. 기반과 지도 데이터</a></li><li><a href="#s6">6. Phase 1. 지도와 색칠 (M1, MVP 핵심)</a></li><li><a href="#s7">7. Phase 2. 기록·통계·위시 (M2)</a></li><li><a href="#s8">8. Phase 3. 공유 이미지 (M3)</a></li><li><a href="#s9">9. Phase 4. AI 추천 (M4)</a></li><li><a href="#s10">10. Phase 5. 성취와 연출 강화 (M5, P1)</a></li><li><a href="#s11">11. Phase 6. 확장 (M6, P2)</a></li><li><a href="#s12">12. 커밋 가이드 (사용자 직접 작업)</a></li><li><a href="#s13">13. 위험 요소와 대응 (구현 관점)</a></li><li><a href="#s14">14. 다음 단계</a></li></ol>
+  </nav>
+  <main>
+    <header class="hero">
+      <div class="eyebrow">VOYAGE ATLAS · IMPLEMENTATION PLAN</div>
+      <h1>나의 여정 지도(Voyage Atlas)<br><span class="gold">구현 계획서</span></h1>
+      <ol class="phases" aria-label="Phase 0부터 6까지의 단계"><li><span class="ph-num">0</span><span class="ph-name">기반과 지도 데이터</span><span class="ph-m">M1 준비</span></li><li><span class="ph-num">1</span><span class="ph-name">지도와 색칠</span><span class="ph-m">M1</span></li><li><span class="ph-num">2</span><span class="ph-name">기록·통계·위시</span><span class="ph-m">M2</span></li><li><span class="ph-num">3</span><span class="ph-name">공유 이미지</span><span class="ph-m">M3</span></li><li><span class="ph-num">4</span><span class="ph-name">AI 추천</span><span class="ph-m">M4</span></li><li><span class="ph-num">5</span><span class="ph-name">성취와 연출</span><span class="ph-m">M5 · P1</span></li><li><span class="ph-num">6</span><span class="ph-name">확장</span><span class="ph-m">M6 · P2</span></li></ol>
+    </header>
+    <div class="table-wrap meta"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>문서 버전</td>
+<td>v1.0</td>
+</tr>
+<tr>
+<td>작성일</td>
+<td>2026-10-15</td>
+</tr>
+<tr>
+<td>기준 문서</td>
+<td><code>docs/Voyage_Atlas_PRD.md</code>(v0.3), <code>design/DESIGN.md</code>, <code>design/design-mockup.html</code></td>
+</tr>
+<tr>
+<td>진행 방식</td>
+<td>Phase 단위로 구현 → 확인 → 사용자 검토 → 사용자가 직접 커밋</td>
+</tr>
+</tbody></table>
+</div><section class="card glass"><h2 id="s1">1. 이번 계획에 반영한 결정 사항</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>결정</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>폴더</td>
+<td>프로젝트 루트가 앱 루트. 문서(md)는 모두 <code>docs/</code>, 디자인 파일은 <code>design/</code>. 기존 파일 이름 유지</td>
+</tr>
+<tr>
+<td>진행 단위</td>
+<td>단계별(Phase 0 → 6). 한 Phase가 끝나면 확인 후 다음 Phase 시작</td>
+</tr>
+<tr>
+<td>디자인</td>
+<td>시안 확정. 시안의 모습·연출·문구를 최대한 그대로 구현</td>
+</tr>
+<tr>
+<td>장소 상태</td>
+<td>방문함 / 경유 / 위시리스트 / 미방문(<strong>거주 없음</strong>)</td>
+</tr>
+<tr>
+<td>대한민국</td>
+<td>방문 국가로 셈. 한국 시도·도시를 하나라도 방문하면 대한민국 자동 방문 처리</td>
+</tr>
+<tr>
+<td>방문 횟수</td>
+<td>여행 수. 여행이 없고 단순 표시만 있으면 1회. 여행이 생기면 단순 표시는 흡수(단순 표시 + 여행 2개 = 2회)</td>
+</tr>
+<tr>
+<td>국기</td>
+<td><strong>이모지 사용 금지.</strong> flag-icons SVG를 <code>assets/flags/</code>에 보관해 <code>&lt;img&gt;</code>로 표시. 없으면 중립 깃발 아이콘(코드 글자 표시 금지)</td>
+</tr>
+<tr>
+<td>한국 경계</td>
+<td>vuski/admdongkor <code>ver20260701</code>(행정동) → 시도·시군구로 합침. <strong>독도 폴리곤 포함 확인함</strong>. 독도 마커·라벨 항상 표시</td>
+</tr>
+<tr>
+<td>도시 데이터</td>
+<td>GeoNames <code>cities15000</code>(약 3만 곳) + 한국어 이름(alternateNames) + 한국 시군구 도시 전체 + 주요 관광 도시 수작업 보강</td>
+</tr>
+<tr>
+<td>Git</td>
+<td>저장소 생성과 init·add·commit·push는 사용자가 직접. 이 문서에 커밋 시점과 메시지를 추천</td>
+</tr>
+</tbody></table>
+</div><h3>1.1 사전 확인 결과 (2026-10-15)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>확인 항목</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>개발 도구</td>
+<td>Node v24.15.0, npm 11.12.1, Python 3.14.6, mapshaper 0.7.86(npx) 사용 가능</td>
+</tr>
+<tr>
+<td>한국 경계</td>
+<td>admdongkor 최신 <code>ver20260701</code> 존재. <code>ver20250101</code>로 검사한 결과 17개 시도(행정표준코드 11·26·27·28·29·30·31·36·41·43·44·46·47·48·50·51·52), 울릉읍 MultiPolygon에 동경 131.87° 부근 폴리곤 2개(독도 동도·서도) 포함</td>
+</tr>
+<tr>
+<td>라이브러리 최신 버전</td>
+<td>d3 7.9.0, topojson-client 3.1.0, idb-keyval 6.3.0, canvas-confetti 1.9.4, marked 18.1.1, DOMPurify 3.4.17, world-atlas 2.0.2, flag-icons 7.5.0</td>
+</tr>
+<tr>
+<td>데이터 다운로드</td>
+<td>GeoNames, jsDelivr(flag-icons), GitHub(admdongkor) 접근 가능</td>
+</tr>
+</tbody></table>
+</div></section>
+<section class="card glass"><h2 id="s2">2. 공통 원칙</h2>
+<ol>
+<li><strong>빌드 없는 정적 앱</strong>: 브라우저에서 바로 실행되는 ES 모듈입니다. 라이브러리는 import map으로 CDN 버전을 고정합니다. 단, <code>tools/</code>의 데이터 전처리 스크립트는 개발할 때만 Node로 한 번 실행합니다.</li>
+<li><strong>로컬 실행</strong>: ES 모듈은 <code>file://</code>로 열면 동작하지 않으므로 <code>npx serve .</code> 또는 <code>python -m http.server</code>로 띄웁니다. 실행 방법은 <code>docs/README_dev.md</code>에 적습니다.</li>
+<li><strong>시안 코드 재사용</strong>: <code>drawWorld</code>, <code>scratch</code>, <code>particles</code>, <code>countTo</code>, <code>toast</code>, <code>coin</code>, <code>addStar</code>, 그리고 시안의 CSS 2~3절을 출발점으로 씁니다.</li>
+<li><strong>계산은 순수 함수 + 테스트</strong>: 통계·방문 횟수·날짜 합집합은 <code>js/stats.js</code>의 순수 함수로 만들고 Node 내장 테스트 러너(<code>node --test</code>)로 검증합니다.</li>
+<li><strong>화면 확인</strong>: 각 Phase가 끝나면 Playwright로 데스크톱(1440px)과 모바일(390px) 화면을 찍어 시안과 비교합니다.</li>
+<li><strong>범위 지키기</strong>: 각 Phase에는 그 Phase의 기능만 넣습니다. 시안에는 있지만 다음 Phase 기능인 요소(예: M1의 AI 탭)는 탭 자리만 두고 &quot;준비 중&quot; 상태로 둡니다.</li>
+</ol>
+</section>
+<section class="card glass"><h2 id="s3">3. 최종 폴더 구조</h2>
+<pre><code>VoyageAtlas/
+├─ docs/                       문서(PRD, 구현 계획, 개발 안내, 데이터 출처)
+├─ design/                     DESIGN.md, design-mockup.html, (이후) 화면 캡처
+├─ tools/                      데이터 전처리 스크립트(Node)
+│  ├─ build-world.mjs          world-atlas 110m·50m 복사 + 작은 나라 목록 계산
+│  ├─ build-countries.mjs      countries.ko.json 생성(시안 COUNTRY_RAW + 보강)
+│  ├─ build-korea.mjs          admdongkor → 시도·시군구 TopoJSON(독도 검사 포함)
+│  ├─ build-flags.mjs          flag-icons SVG 복사(필요한 국가만)
+│  └─ build-cities.mjs         GeoNames → cities.json(+ 한국어 이름)
+├─ assets/
+│  └─ flags/                   국기 SVG(약 250개)
+├─ data/                       앱이 읽는 데이터(전처리 결과)
+├─ css/  tokens.css, app.css
+├─ js/   main.js, store.js, stats.js, map/, ui/, trips.js, wishlist.js, ai/, share/
+├─ tests/                      단위 테스트, 데이터 검증 테스트
+├─ index.html
+├─ manifest.webmanifest, sw.js (Phase 5)
+└─ .gitignore                  tools/.cache/(원본 다운로드, 수십 MB) 제외
+</code></pre>
+</section>
+<section class="card glass"><h2 id="s4">4. 단계별 구현 계획 한눈에 보기</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>이름</th>
+<th>PRD 마일스톤</th>
+<th>핵심 결과물</th>
+<th>완료 기준</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>0</strong></td>
+<td>기반과 지도 데이터</td>
+<td>M1 준비</td>
+<td>앱 셸, 디자인 토큰, 세계·한국 지도 데이터, 국기 SVG, 국가 사전</td>
+<td>빈 앱에 세계·한국 지도가 시안 스타일로 그려지고, 데이터 검증 테스트 통과</td>
+</tr>
+<tr>
+<td><strong>1</strong></td>
+<td>지도와 색칠</td>
+<td>M1</td>
+<td>클릭 팝오버, 빠른 색칠, 금박 긁기, 실행 취소, HUD, 검색, 자동 저장, JSON 백업</td>
+<td>다녀온 나라·시도를 모두 색칠하고 새로고침해도 유지</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>기록·통계·위시</td>
+<td>M2</td>
+<td>도시 데이터, 여행 연대기, 장소 상세, 통계 대시보드, 위시리스트</td>
+<td>여행을 넣으면 통계가 정확하고, 위시를 관리할 수 있음</td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td>공유 이미지</td>
+<td>M3</td>
+<td>공유 스튜디오, 템플릿 2종, 크기 4종, 테마 3종, PNG·공유</td>
+<td>휴대폰에서 인스타그램 세로 이미지를 만들어 바로 공유</td>
+</tr>
+<tr>
+<td><strong>4</strong></td>
+<td>AI 추천</td>
+<td>M4</td>
+<td>설정(API 키·모델), 비용 확인 창, 3모델 병렬 추천, 합의 핀</td>
+<td>세 모델의 추천을 지도에서 비교하고 위시에 담음</td>
+</tr>
+<tr>
+<td><strong>5</strong></td>
+<td>성취와 연출 강화</td>
+<td>M5(P1)</td>
+<td>배지, 지구본, 경로 다시 보기, 시군구, 도시 핀, PWA 등</td>
+<td>P1 기능 동작, 오프라인 실행</td>
+</tr>
+<tr>
+<td><strong>6</strong></td>
+<td>확장</td>
+<td>M6(P2)</td>
+<td>3D 지구본, 성향 분석, 사진 썸네일 등</td>
+<td>필요할 때 개별 결정</td>
+</tr>
+</tbody></table>
+</div><blockquote>
+<p>Phase 1이 끝나면 GitHub Pages에 처음 배포해 휴대폰에서 확인하는 것을 권합니다(HTTPS가 있어야 이후 Web Share API·PWA를 시험할 수 있음).</p>
+</blockquote>
+</section>
+<section class="card glass"><h2 id="s5">5. Phase 0. 기반과 지도 데이터</h2>
+<p><strong>목표</strong>: 앱 뼈대와 &quot;앞으로 바뀌지 않을 데이터&quot;를 먼저 단단히 만듭니다.</p>
+<h3>작업</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>작업</th>
+<th>산출 파일</th>
+<th>확인 방법</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0-1</td>
+<td>앱 셸: <code>index.html</code>(import map, 글꼴, 공통 SVG defs <code>#foil</code> <code>#foilHover</code> <code>#hatch</code> <code>#rough</code> <code>#glow</code> <code>#grain</code> <code>#starHalo</code> <code>#sparkle</code> 등), 별 배경 캔버스, 상단바·탭 바 자리</td>
+<td><code>index.html</code>, <code>js/main.js</code></td>
+<td>로컬 서버로 열어 콘솔 오류 0</td>
+</tr>
+<tr>
+<td>0-2</td>
+<td>디자인 토큰과 공통 스타일: DESIGN 3장 토큰 그대로, 시안 CSS의 공통·컴포넌트 절 이전, 다크·라이트</td>
+<td><code>css/tokens.css</code>, <code>css/app.css</code></td>
+<td>시안의 10번 토큰 화면과 색 비교</td>
+</tr>
+<tr>
+<td>0-3</td>
+<td>세계 지도 데이터: world-atlas <code>countries-110m.json</code>, <code>countries-50m.json</code> 복사. 남극 제외. 50m 기준 작은 나라(화면 면적 기준) 목록 계산</td>
+<td><code>tools/build-world.mjs</code>, <code>data/countries-*.json</code></td>
+<td>50m에 싱가포르·몰디브·바티칸·몰타 존재 확인</td>
+</tr>
+<tr>
+<td>0-4</td>
+<td>국가 사전: 시안 <code>COUNTRY_RAW</code>를 바탕으로 195개국 + 지역(대만·홍콩·마카오·그린란드 등), 한국어·영어 이름, ISO 숫자·2자리·3자리, 6대륙, UN 회원 여부, 중심 좌표, 한국어 초성. 코소보 등 ID 없는 지형 처리</td>
+<td><code>tools/build-countries.mjs</code>, <code>data/countries.ko.json</code></td>
+<td>테스트: UN 193 + 옵서버 2 = 195, 50m 지도의 모든 지형이 사전과 연결됨</td>
+</tr>
+<tr>
+<td>0-5</td>
+<td>한국 경계: admdongkor <code>ver20260701</code> 내려받기 → <code>sido</code>로 합쳐 17개 시도, <code>sgg</code>로 합쳐 시군구 → <code>keep-shapes</code> 단순화 → TopoJSON. 목표 용량 시도 ≤ 200KB, 시군구 ≤ 600KB</td>
+<td><code>tools/build-korea.mjs</code>, <code>data/korea-sido.json</code>, <code>data/korea-sigungu.json</code></td>
+<td>테스트: 시도 17개, 이름·코드 최신(강원 51, 전북 52), <strong>독도 좌표(131.8655, 37.2429)를 감싸는 폴리곤이 경북(47)에 존재</strong>, 울릉도·제주 존재</td>
+</tr>
+<tr>
+<td>0-6</td>
+<td>국기: flag-icons 7.5.0 4:3 SVG를 국가 사전의 ISO 2자리 기준으로 복사. 중립 깃발 대체 아이콘. <code>flagImg(iso2)</code> 공통 함수</td>
+<td><code>tools/build-flags.mjs</code>, <code>assets/flags/*.svg</code>, <code>js/ui/flag.js</code></td>
+<td>테스트: 사전의 모든 국가에 SVG 존재(없는 지역은 목록으로 명시). 윈도우 크롬·엣지에서 글자 코드가 하나도 보이지 않음</td>
+</tr>
+<tr>
+<td>0-7</td>
+<td>지도 엔진 1차: 시안 <code>drawWorld</code>를 모듈로 옮김. 세계(Natural Earth)·한국(Mercator) 그리기, 110m 먼저 → 50m 교체, 확대·이동, 툴팁</td>
+<td><code>js/map/engine.js</code>, <code>world.js</code>, <code>korea.js</code></td>
+<td>시안 01·02 화면과 나란히 비교</td>
+</tr>
+<tr>
+<td>0-8</td>
+<td>개발 안내와 데이터 출처 문서, <code>.gitignore</code></td>
+<td><code>docs/README_dev.md</code>, <code>docs/Data_Sources.md</code>, <code>.gitignore</code></td>
+<td>문서대로 실행해서 앱이 뜸</td>
+</tr>
+</tbody></table>
+</div><h3>완료 기준</h3>
+<ul>
+<li>로컬 서버에서 세계 지도(금박)와 한국 지도(17개 시도 + 독도 마커·라벨)가 시안과 같은 스타일로 보입니다.</li>
+<li><code>node --test tests/data.test.js</code> 통과(국가 수, 지형 연결, 국기 존재, 시도 17개, 독도 포함).</li>
+</ul>
+<h3>추천 커밋</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>시점</th>
+<th>커밋 메시지</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>지금(구현 전)</td>
+<td><code>docs: PRD v0.3, 디자인 가이드, 구현 계획서 추가</code></td>
+</tr>
+<tr>
+<td>0-1, 0-2 후</td>
+<td><code>feat: 앱 셸과 디자인 토큰 구성</code></td>
+</tr>
+<tr>
+<td>0-3 ~ 0-6 후</td>
+<td><code>data: 세계·한국 지도, 국가 사전, 국기 SVG 데이터 추가</code></td>
+</tr>
+<tr>
+<td>0-7, 0-8 후</td>
+<td><code>feat(map): 세계·한국 지도 렌더링과 확대·이동</code></td>
+</tr>
+</tbody></table>
+</div></section>
+<section class="card glass"><h2 id="s6">6. Phase 1. 지도와 색칠 (M1, MVP 핵심)</h2>
+<p><strong>목표</strong>: &quot;지금까지 다녀온 나라와 시도를 10분 안에 모두 색칠한다&quot;(PRD 15장 성공 지표).</p>
+<h3>작업</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>작업</th>
+<th>PRD</th>
+<th>산출 파일</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1-1</td>
+<td>상태 저장소: 구독 방식 스토어, IndexedDB 자동 저장(idb-keyval), <code>schemaVersion: 1</code>, 장소 ID 규칙(<code>country:</code>, <code>kr-sido:</code>)</td>
+<td>F9-1, 10.2</td>
+<td><code>js/store.js</code></td>
+</tr>
+<tr>
+<td>1-2</td>
+<td>장소 팝오버: 미방문 [✦ 긁어서 방문 표시] [☆ 위시에 담기] [＋ 기록 추가] / 방문함 [◎ 상세 보기] … , 위쪽 360px 안이면 아래로 뒤집기, 빈 곳 클릭·이동 시 닫힘. 경유 선택 포함</td>
+<td>F2-1, F2-3, DESIGN 6.4</td>
+<td><code>js/ui/popover.js</code></td>
+</tr>
+<tr>
+<td>1-3</td>
+<td>금박 긁기 연출: 마스크 원 850ms, 금빛 외곽선, 금가루 36개, 빠른 색칠 모드 500ms·12개, 애니메이션 줄이기 시 즉시</td>
+<td>DESIGN 7.3, 10장</td>
+<td><code>js/map/effects.js</code></td>
+</tr>
+<tr>
+<td>1-4</td>
+<td>빠른 색칠 토글, 실행 취소 토스트(5초)</td>
+<td>F2-2, F2-7</td>
+<td><code>js/ui/toast.js</code></td>
+</tr>
+<tr>
+<td>1-5</td>
+<td>상태별 채색: 방문 1~4단계(오로라), 경유 빗금, 위시 점선 테두리 + 별 핀</td>
+<td>DESIGN 7.2</td>
+<td><code>js/map/engine.js</code></td>
+</tr>
+<tr>
+<td>1-6</td>
+<td>자동 연동: 한국 시도 방문 → 대한민국 자동 방문</td>
+<td>F2-8, 10.3</td>
+<td><code>js/stats.js</code></td>
+</tr>
+<tr>
+<td>1-7</td>
+<td>작은 나라 원형 마커(자동 계산), 독도 마커</td>
+<td>F1-5, 8.3</td>
+<td><code>js/map/engine.js</code></td>
+</tr>
+<tr>
+<td>1-8</td>
+<td>HUD: 방문국 n/195 카운트업, 진행 링, 다음 목표 문장, 대륙별 진행 막대 6줄, 보조 지표(한국 시도 n/17). 한국 탭 HUD(KOREA CONQUEST)</td>
+<td>F4-1, F4-2, F4-4, DESIGN 6.3</td>
+<td><code>js/ui/hud.js</code></td>
+</tr>
+<tr>
+<td>1-9</td>
+<td>장소 검색: 국가·시도 한국어/영어, 초성 검색(구현 비용이 작아 함께 처리) → 지도 이동 + 팝오버</td>
+<td>F1-6</td>
+<td><code>js/ui/search.js</code></td>
+</tr>
+<tr>
+<td>1-10</td>
+<td>보기 전환(세계 / 대한민국), 지도 범례, 확대 버튼</td>
+<td>F1-3, DESIGN 6.5</td>
+<td></td>
+</tr>
+<tr>
+<td>1-11</td>
+<td>빈 상태(첫 실행) 카드, 시작 연출(방문국이 70ms 간격으로 빛남, 두 번째부터 생략)</td>
+<td>DESIGN 7.4, 9장</td>
+<td></td>
+</tr>
+<tr>
+<td>1-12</td>
+<td>JSON 백업·복원(덮어쓰기 / 합치기), 간단한 설정 패널(테마, 애니메이션 줄이기, 경유 통계 포함, 데이터 초기화 2단계)</td>
+<td>F9-2, F10-4, F10-5</td>
+<td><code>js/ui/settings.js</code></td>
+</tr>
+<tr>
+<td>1-13</td>
+<td>키보드 접근: 검색 + 목록 보기로 색칠, 포커스 표시, <code>aria-live</code> 토스트</td>
+<td>12장 접근성</td>
+<td></td>
+</tr>
+<tr>
+<td>1-14</td>
+<td>모바일 레이아웃(≤720px): 지도 62vh + HUD 카드, 모바일 탭 바</td>
+<td>DESIGN 5.3</td>
+<td></td>
+</tr>
+</tbody></table>
+</div><h3>확인 방법</h3>
+<ul>
+<li>단위 테스트: 상태 전환, 실행 취소, 한국 → 대한민국 자동 처리, 백업 → 복원 왕복 시 데이터 동일.</li>
+<li>Playwright: 나라 클릭 → 긁기 → 새로고침 후 유지, 빠른 색칠로 10개국 연속 입력, 1440px·390px 화면 캡처를 시안과 비교.</li>
+<li>사용자 확인: 실제로 다녀온 나라·시도를 직접 색칠해 보기.</li>
+</ul>
+<h3>완료 기준</h3>
+<p>다녀온 모든 나라·시도를 색칠하고 새로고침해도 유지되며, JSON 백업 파일로 다른 브라우저에서 복원됩니다.</p>
+<h3>추천 커밋</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>시점</th>
+<th>커밋 메시지</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1-1 후</td>
+<td><code>feat(store): IndexedDB 자동 저장 상태 저장소</code></td>
+</tr>
+<tr>
+<td>1-2 ~ 1-5 후</td>
+<td><code>feat(map): 장소 팝오버, 빠른 색칠, 금박 긁기 연출, 실행 취소</code></td>
+</tr>
+<tr>
+<td>1-6 ~ 1-8 후</td>
+<td><code>feat(hud): 방문 국가·대륙·시도 통계 HUD</code></td>
+</tr>
+<tr>
+<td>1-9 ~ 1-11 후</td>
+<td><code>feat: 장소 검색(초성 포함), 보기 전환, 첫 실행 화면</code></td>
+</tr>
+<tr>
+<td>1-12 ~ 1-14 후</td>
+<td><code>feat: JSON 백업·복원, 기본 설정, 모바일 레이아웃</code></td>
+</tr>
+<tr>
+<td>Phase 1 확인 후</td>
+<td>(GitHub Pages 첫 배포 권장) <code>chore: Phase 1 완료</code> 또는 태그 <code>v0.1.0</code></td>
+</tr>
+</tbody></table>
+</div></section>
+<section class="card glass"><h2 id="s7">7. Phase 2. 기록·통계·위시 (M2)</h2>
+<p><strong>목표</strong>: 여행 기록을 넣으면 통계가 정확하고, &quot;꿈 → 현실&quot; 흐름이 동작합니다.</p>
+<h3>작업</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>작업</th>
+<th>PRD</th>
+<th>산출 파일</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2-1</td>
+<td><strong>도시 데이터 준비</strong>: GeoNames <code>cities15000</code> + <code>alternateNamesV2</code>에서 한국어(<code>ko</code>) 이름 추출 → 한국 시군구 중심 도시 전체 포함 확인 → 주요 관광 도시 한국어 이름 수작업 보강표(<code>tools/city-ko-overrides.csv</code>) → 압축 JSON(필드: id, 이름 ko/en, 국가, 좌표, 인구, 초성). 목표 ≤ 1.5MB(전송 시 gzip ≈ 500KB), 검색을 처음 쓸 때 지연 로딩</td>
+<td>7.2, F1-6</td>
+<td><code>tools/build-cities.mjs</code>, <code>data/cities.json</code></td>
+</tr>
+<tr>
+<td>2-2</td>
+<td><strong>통계 순수 함수와 테스트 먼저(TDD)</strong>: 방문 횟수(흡수 규칙), 첫·최근 방문일, 여행 일수 합집합, 날짜 미상 분리, 해외/국내, 경유 제외, 대륙 비율, TOP 5, 가장 긴 여행</td>
+<td>F4, 10.3</td>
+<td><code>js/stats.js</code>, <code>tests/stats.test.js</code></td>
+</tr>
+<tr>
+<td>2-3</td>
+<td>여행 추가·편집 패널(DESIGN 9장): 제목, 기간(연·월만 스위치), 동행, 인원, 방문 장소(국가·시도·도시 검색 + 칩, 끌어서 순서 변경), 별점, 대표 색, 메모</td>
+<td>F2-4, F3-1</td>
+<td><code>js/ui/trip-form.js</code></td>
+</tr>
+<tr>
+<td>2-4</td>
+<td>여행 연대기: 연도별 타임라인(최신순/오래된순), 선택 시 지도에서 해당 장소 강조, 경로 지도(정적 대권 곡선)</td>
+<td>F3-2, F3-3</td>
+<td><code>js/trips.js</code></td>
+</tr>
+<tr>
+<td>2-5</td>
+<td>장소 상세 패널: 국기 56px, 대륙·방문 태그, 작은 지도, 방문 기록 목록, 관련 여행, 도시 칩, 메모</td>
+<td>F2-5, F2-6</td>
+<td><code>js/ui/place-detail.js</code></td>
+</tr>
+<tr>
+<td>2-6</td>
+<td>통계 대시보드(시안 04): 성과 문장 제목, KPI 4칸, 대륙 도넛, 연도별 막대, TOP 5, 기록으로 본 나. 배지 보관함은 Phase 5</td>
+<td>F4-1~F4-5</td>
+<td><code>js/stats-view.js</code></td>
+</tr>
+<tr>
+<td>2-7</td>
+<td>위시리스트(시안 06): 별 지도 카드, 위시 카드(우선순위·목표 시기·D-day·예산·함께·링크), 정렬, 끌어서 순서 변경, 자유 장소(지도에서 위치 찍기)</td>
+<td>F6-1~F6-4, F6-6</td>
+<td><code>js/wishlist.js</code></td>
+</tr>
+<tr>
+<td>2-8</td>
+<td>&quot;꿈 → 현실&quot;: [✓ 다녀왔어요] → 여행 작성 패널 → 저장 시 별이 떨어져 색칠되는 연출</td>
+<td>F6-5</td>
+<td></td>
+</tr>
+<tr>
+<td>2-9</td>
+<td>홈 HUD의 &quot;가장 가까운 꿈&quot; D-day, 여행 일수 보조 지표</td>
+<td>F6-6</td>
+<td></td>
+</tr>
+<tr>
+<td>2-10</td>
+<td>해시 라우팅과 하단 탭 바(지도·연대기·위시·통계 활성, AI·공유는 &quot;준비 중&quot;), 모바일 하단 시트(3단계)</td>
+<td>4장, DESIGN 5.4</td>
+<td><code>js/main.js</code>, <code>js/ui/sheet.js</code></td>
+</tr>
+</tbody></table>
+</div><h3>확인 방법</h3>
+<ul>
+<li><code>tests/stats.test.js</code>: 겹치는 날짜(출장 + 여행), 연·월만 있는 여행, 경유만 있는 나라, 단순 표시 + 여행 2개 = 2회, 국내 여행 → 대한민국 방문, 여행 500개에서 계산 50ms 이내.</li>
+<li>도시 데이터 검증: 서울·부산·제주·도쿄·교토·포르투·트빌리시 등 한국어 검색 결과 확인, 한국 시군구 중심 도시 누락 0.</li>
+<li>Playwright: 시나리오 B(교토·오사카 여행 추가 → 일본 방문 횟수 증가 → 통계 반영)를 그대로 따라 함.</li>
+</ul>
+<h3>추천 커밋</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>시점</th>
+<th>커밋 메시지</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2-1 후</td>
+<td><code>data: GeoNames 기반 도시 데이터와 한국어 이름 추가</code></td>
+</tr>
+<tr>
+<td>2-2 후</td>
+<td><code>feat(stats): 통계 계산 순수 함수와 단위 테스트</code></td>
+</tr>
+<tr>
+<td>2-3 ~ 2-5 후</td>
+<td><code>feat(trips): 여행 기록·연대기·장소 상세</code></td>
+</tr>
+<tr>
+<td>2-6 후</td>
+<td><code>feat(stats): 통계 대시보드(KPI, 대륙 도넛, 연도별 막대, TOP 5)</code></td>
+</tr>
+<tr>
+<td>2-7 ~ 2-9 후</td>
+<td><code>feat(wish): 위시리스트와 꿈→현실 전환</code></td>
+</tr>
+<tr>
+<td>2-10 후</td>
+<td><code>feat: 탭 라우팅과 모바일 하단 시트</code> → 태그 <code>v0.2.0</code></td>
+</tr>
+</tbody></table>
+</div></section>
+<section class="card glass"><h2 id="s8">8. Phase 3. 공유 이미지 (M3)</h2>
+<p><strong>목표</strong>: 휴대폰에서 인스타그램 세로 이미지를 만들어 바로 공유합니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>작업</th>
+<th>PRD</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>3-1</td>
+<td>공유 스튜디오 화면(시안 08): 템플릿 목록, 체커보드 미리 보기, 옵션 패널</td>
+<td>F8-1</td>
+</tr>
+<tr>
+<td>3-2</td>
+<td>렌더링 파이프라인: 오프스크린 SVG(지도) → Canvas, 글자는 Canvas <code>fillText</code>(<code>document.fonts.ready</code> 이후), 국기는 SVG 이미지로 그림, 2배 해상도</td>
+<td>10.4, F8-10</td>
+</tr>
+<tr>
+<td>3-3</td>
+<td>템플릿 ① 월드 스크래치 포스터, ② 대한민국 정복 지도(독도 포함)</td>
+<td>F8-2, F8-3</td>
+</tr>
+<tr>
+<td>3-4</td>
+<td>크기 4종(1080×1350, 1080×1920, 1080×1080, 1920×1080), 테마 3종(밤하늘 금박·빈티지 지도·미니멀 화이트)</td>
+<td>F8-7, F8-8, DESIGN 8장</td>
+</tr>
+<tr>
+<td>3-5</td>
+<td>옵션: 숫자·날짜 숨기기, 제목·이름 문구, 워터마크</td>
+<td>F8-8</td>
+</tr>
+<tr>
+<td>3-6</td>
+<td>PNG 저장, Web Share API(<code>navigator.canShare({ files })</code>) 공유, 미지원 시 다운로드</td>
+<td>F8-9</td>
+</tr>
+</tbody></table>
+</div><p><strong>확인</strong>: 크롬(윈도우)·사파리(iOS)·삼성 인터넷에서 한글 글꼴과 국기가 깨지지 않는지, 출력 크기가 정확한지 확인합니다. iOS 실기기 확인은 GitHub Pages 배포본으로 합니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>시점</th>
+<th>커밋 메시지</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>3-1, 3-2 후</td>
+<td><code>feat(share): 공유 스튜디오와 Canvas 렌더링 파이프라인</code></td>
+</tr>
+<tr>
+<td>3-3 ~ 3-6 후</td>
+<td><code>feat(share): 포스터 템플릿 2종, 크기·테마 옵션, PNG 저장·공유</code> → 태그 <code>v0.3.0</code></td>
+</tr>
+</tbody></table>
+</div></section>
+<section class="card glass"><h2 id="s9">9. Phase 4. AI 추천 (M4)</h2>
+<p><strong>목표</strong>: 조건을 넣고 세 모델의 추천을 지도에서 비교해 위시리스트에 담습니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>작업</th>
+<th>PRD</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4-0</td>
+<td><strong>시작 전 확인</strong>: OpenRouter에서 Claude Sonnet 5.5, GPT-6 Luna, Gemini 3.8 Flash의 슬러그·단가·<code>response_format</code> 지원·웹 검색 방식을 확인하고 기본 설정값으로 정리</td>
+<td>9.1, 16.3</td>
+</tr>
+<tr>
+<td>4-1</td>
+<td>설정 확장: API 키(이 기기 저장 / 이번 세션만, 가려진 입력, 연결 테스트), 모델 3개 슬러그·단가 자동 조회, 홈 공항, 환율</td>
+<td>F10-1~F10-3</td>
+</tr>
+<tr>
+<td>4-2</td>
+<td>OpenRouter 호출 모듈: 병렬 호출, 실패 모델 표시와 재시도, <code>usage</code> 기반 실제 비용 기록</td>
+<td>F7-3, F7-9</td>
+</tr>
+<tr>
+<td>4-3</td>
+<td>프롬프트와 맥락: 조건 + 이력 요약(메모·동행인 이름 제외) + 제외 목록, JSON 스키마 검증, 실패 시 1회 재요청</td>
+<td>F7-1, F7-2, 9.3, 9.6</td>
+</tr>
+<tr>
+<td>4-4</td>
+<td>비용 확인 창(Boarding Receipt): 모델 체크박스, 토큰 추정, USD·원화</td>
+<td>F7-7, DESIGN 6.10</td>
+</tr>
+<tr>
+<td>4-5</td>
+<td>결과 병합: 국가 + 정규화 이름, 50km 이내 같은 곳, 합의 3/3·2/3·1/3, 좌표 경계 검증(<code>d3.geoContains</code>) 후 보정</td>
+<td>F7-8, 9.5</td>
+</tr>
+<tr>
+<td>4-6</td>
+<td>AI 추천 화면(시안 07): 조건 패널, 모델 상태, 추천 카드 ↔ 지도 핀 연동, [☆ 위시] [제외], 외교부 안전 정보 링크</td>
+<td>F7-4~F7-6</td>
+</tr>
+<tr>
+<td>4-7</td>
+<td>같은 조건 캐시, 추천 기록 보관(P1이지만 캐시와 함께 구현)</td>
+<td>9.7, F7-10</td>
+</tr>
+<tr>
+<td>4-8</td>
+<td>AI 텍스트 안전 표시(marked + DOMPurify), 키는 백업 JSON에 포함하지 않음</td>
+<td>12장 보안</td>
+</tr>
+</tbody></table>
+</div><p><strong>확인</strong>: 병합·합의·좌표 검증은 저장된 응답 샘플로 단위 테스트합니다(실제 호출 없이). 실제 호출은 사용자가 키를 넣은 뒤 1회 시험합니다(비용 발생, 사전 안내).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>시점</th>
+<th>커밋 메시지</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4-1, 4-2 후</td>
+<td><code>feat(ai): OpenRouter 설정과 병렬 호출 모듈</code></td>
+</tr>
+<tr>
+<td>4-3 ~ 4-5 후</td>
+<td><code>feat(ai): 추천 프롬프트, 비용 확인 창, 결과 병합과 좌표 검증</code></td>
+</tr>
+<tr>
+<td>4-6 ~ 4-8 후</td>
+<td><code>feat(ai): AI 추천 화면과 지도 핀, 위시 담기</code> → 태그 <code>v0.4.0</code>(MVP 완성)</td>
+</tr>
+</tbody></table>
+</div></section>
+<section class="card glass"><h2 id="s10">10. Phase 5. 성취와 연출 강화 (M5, P1)</h2>
+<p>필요하면 하위 단계(5a, 5b…)로 나누어 하나씩 진행합니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>묶음</th>
+<th>작업</th>
+<th>PRD</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>5a 성취</td>
+<td>마일스톤·배지 코인, 축하 창(코인 회전 + 색종이), 배지 보관함, 다음 목표 제안</td>
+<td>F5-1~F5-4</td>
+</tr>
+<tr>
+<td>5b 지구본</td>
+<td>2D 지구본(Orthographic, 자전·끌기·관성), 세계↔지구본↔한국 투영 전환 애니메이션</td>
+<td>F1-7, F1-8</td>
+</tr>
+<tr>
+<td>5c 경로</td>
+<td>경로 다시 보기(비행기 아이콘), 전체 연대기 타임랩스(연도 슬라이더), 다가오는 여정 D-day</td>
+<td>F3-4~F3-6</td>
+</tr>
+<tr>
+<td>5d 지도 확장</td>
+<td>한국 시군구(두 번 클릭, 지연 로딩), 도시 핀(확대 수준별 라벨), 색칠 기준 전환</td>
+<td>F1-9~F1-11</td>
+</tr>
+<tr>
+<td>5e 통계 확장</td>
+<td>월별 빈도, 이동 거리(&quot;지구 ○바퀴&quot;), 동행 비율, 위시 달성률</td>
+<td>F4-6~F4-8</td>
+</tr>
+<tr>
+<td>5f 공유 확장</td>
+<td>템플릿 ③ 올해의 여정, ④ 여행 카드, A3 인쇄 크기</td>
+<td>F8-4, F8-5, F8-7</td>
+</tr>
+<tr>
+<td>5g 데이터·오프라인</td>
+<td>PWA(manifest, 서비스 워커 캐시: 앱·지도·국기·글꼴), 백업 권유 배너, CSV 내보내기·가져오기, 효과음, 웹 검색 토글</td>
+<td>F9-3~F9-5, F10-4, F7-12</td>
+</tr>
+</tbody></table>
+</div><p>커밋은 묶음마다 하나씩 권합니다. 예: <code>feat(badges): 마일스톤 배지와 축하 연출</code>, <code>feat(map): 2D 지구본과 투영 전환</code>, <code>feat(pwa): 서비스 워커 오프라인 캐시</code>. 모두 끝나면 태그 <code>v1.0.0</code>.</p>
+</section>
+<section class="card glass"><h2 id="s11">11. Phase 6. 확장 (M6, P2)</h2>
+<p>3D 시네마틱 지구본(globe.gl 지연 로딩), AI 여행 성향 분석, 장소별 사진 썸네일, 위시 보드 템플릿, 인쇄용 SVG/PDF, 재미 배지, 트립픽 연동 JSON. 이 단계는 Phase 5 이후 실제로 쓰면서 우선순위를 다시 정합니다.</p>
+</section>
+<section class="card glass"><h2 id="s12">12. 커밋 가이드 (사용자 직접 작업)</h2>
+<h3>12.1 처음 한 번</h3>
+<pre><code class="language-bash">git init
+git add docs design .gitignore
+git commit -m &quot;docs: PRD v0.3, 디자인 가이드, 구현 계획서 추가&quot;
+git branch -M main
+git remote add origin &lt;저장소 주소&gt;
+git push -u origin main
+</code></pre>
+<blockquote>
+<p><code>.gitignore</code>는 Phase 0-8에서 만듭니다. 그 전에 첫 커밋을 한다면 <code>.omc/</code> 폴더(도구 상태 파일)가 함께 올라가지 않도록 <code>docs</code>와 <code>design</code>만 지정해 추가하세요.</p>
+</blockquote>
+<h3>12.2 커밋 시점 원칙</h3>
+<ul>
+<li>각 Phase 표의 &quot;추천 커밋&quot; 시점, 즉 <strong>확인이 끝나 앱이 정상 동작하는 상태</strong>에서 커밋합니다.</li>
+<li>제가 작업 묶음을 끝낼 때마다 &quot;지금 커밋하기 좋은 시점입니다&quot;와 함께 메시지와 <code>git add</code> 대상을 알려 드립니다.</li>
+<li>데이터 파일(<code>data/</code>, <code>assets/flags/</code>)은 코드와 분리해 <code>data:</code> 커밋으로 올리면 이력이 깔끔합니다.</li>
+</ul>
+<h3>12.3 메시지 형식</h3>
+<p><code>&lt;종류&gt;(&lt;범위&gt;): &lt;한국어 요약&gt;</code></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>종류</th>
+<th>쓰임</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>feat</code></td>
+<td>새 기능</td>
+</tr>
+<tr>
+<td><code>fix</code></td>
+<td>버그 수정</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>지도·국가·도시·국기 데이터</td>
+</tr>
+<tr>
+<td><code>docs</code></td>
+<td>문서(PRD, 계획서, 안내)</td>
+</tr>
+<tr>
+<td><code>style</code></td>
+<td>화면 스타일만 수정</td>
+</tr>
+<tr>
+<td><code>refactor</code></td>
+<td>동작 변화 없는 구조 정리</td>
+</tr>
+<tr>
+<td><code>test</code></td>
+<td>테스트 추가·수정</td>
+</tr>
+<tr>
+<td><code>chore</code></td>
+<td>설정, 도구, 배포</td>
+</tr>
+</tbody></table>
+</div><h3>12.4 GitHub Pages 배포</h3>
+<p>Phase 1이 끝나면 저장소 Settings → Pages → Branch <code>main</code> / <code>/(root)</code>로 설정합니다. 앱이 루트의 <code>index.html</code>에서 실행되므로 별도 빌드가 필요 없습니다.</p>
+</section>
+<section class="card glass"><h2 id="s13">13. 위험 요소와 대응 (구현 관점)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>위험</th>
+<th>대응</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>독도가 단순화 과정에서 사라짐</td>
+<td><code>keep-shapes</code> 옵션 + 데이터 테스트로 독도 폴리곤 존재를 매번 검사 + 마커·라벨 항상 표시</td>
+</tr>
+<tr>
+<td>국기가 글자로 보임</td>
+<td>이모지를 아예 쓰지 않음. 모든 국기는 <code>flagImg()</code> 한 함수로만 표시하고, 코드 검사로 지역 표시 문자(U+1F1E6~1F1FF) 사용이 없는지 확인</td>
+</tr>
+<tr>
+<td>도시 데이터 용량</td>
+<td>필요한 필드만 남기고 짧은 키 사용, 검색을 처음 쓸 때 지연 로딩, 서비스 워커 캐시</td>
+</tr>
+<tr>
+<td>도시 한국어 이름 누락·어색함</td>
+<td>GeoNames 한국어 이름 + 수작업 보강표, 검색은 영어 이름으로도 가능</td>
+</tr>
+<tr>
+<td>시안과 실제 데이터 차이(110m → 50m, 한국 코드 체계)</td>
+<td>시안 코드 이전 시 국가·시도 키를 새 사전 기준으로 바꾸고, 화면 캡처로 비교</td>
+</tr>
+<tr>
+<td>50m 지도 성능</td>
+<td>110m 먼저 표시 후 교체, 확대·이동 중 무거운 필터 끄기</td>
+</tr>
+<tr>
+<td>AI 모델 이름·사양 변경</td>
+<td>4-0에서 확인, 슬러그는 설정값</td>
+</tr>
+<tr>
+<td>공유 이미지 한글·국기 깨짐</td>
+<td>Canvas <code>fillText</code>, 국기 SVG를 이미지로 불러 그림, 기기별 확인</td>
+</tr>
+</tbody></table>
+</div></section>
+<section class="card glass"><h2 id="s14">14. 다음 단계</h2>
+<p>이 계획서를 확인해 주시면 <strong>Phase 0</strong>부터 시작합니다. Phase 0의 첫 작업은 앱 셸(0-1)과 디자인 토큰(0-2)이며, 이어서 데이터 전처리(0-3 ~ 0-6)를 진행합니다.</p>
+</section>
+  </main>
+</div>
+<button class="theme-btn" type="button" id="themeBtn" aria-label="밝은 테마와 어두운 테마 전환">◐ 테마</button>
+<script>
+(() => {
+  const root = document.documentElement, btn = document.getElementById('themeBtn');
+  try { const t = localStorage.getItem('va-plan-theme'); if (t) root.dataset.theme = t; } catch (e) {}
+  btn.addEventListener('click', () => {
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('va-plan-theme', root.dataset.theme); } catch (e) {}
+  });
+  const links = [...document.querySelectorAll('.toc a')];
+  const obs = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+  }), { rootMargin: '0px 0px -70% 0px' });
+  document.querySelectorAll('h2[id]').forEach(h => obs.observe(h));
+})();
+</script>
+</body>
+</html>
