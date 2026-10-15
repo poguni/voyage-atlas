@@ -2,27 +2,37 @@
 import * as d3 from 'd3';
 import { feature } from 'topojson-client';
 import { createMap } from './engine.js';
+import { addStar } from './effects.js';
 import { loadJSON, loadCountries, CONT } from '../data.js';
 import { flagHTML } from '../ui/flag.js';
 import { esc } from '../env.js';
+import { countryId } from '../stats.js';
 
 const toFeatures = topo => feature(topo, topo.objects.countries).features;
 
-// Phase 0: 아직 방문 기록이 없으므로 모두 미방문(금박)
-const classOf = () => 'unv';
-const statusText = () => '미방문';
-
-function tipHTML(c) {
-  return `<b>${flagHTML(c.iso2, c.ko, 16)}${esc(c.ko)}</b>`
-    + `<span class="dim">${esc(c.en)} · ${CONT[c.cont] ?? ''}</span><br>`
-    + `<span style="color:var(--gold-strong)">${statusText(c)}</span>`;
+// 여러 폴리곤으로 된 나라(프랑스 + 프랑스령 기아나 등)는 가장 큰 폴리곤을 기준으로 확대합니다.
+function mainBounds(path, f) {
+  if (f.geometry.type !== 'MultiPolygon') return path.bounds(f);
+  let best = null, area = -1;
+  for (const coordinates of f.geometry.coordinates) {
+    const g = { type: 'Polygon', coordinates };
+    const a = path.area(g);
+    if (a > area) { area = a; best = g; }
+  }
+  return path.bounds(best);
 }
 
-export async function worldView(container) {
+/**
+ * @param app { classFor(placeId), statusText(placeId), onPlace(e, placeId, el, xy), onZoomStart(), onBackground(), stars(view) }
+ */
+export async function worldView(container, app) {
   const [{ list, byId }, topo110] = await Promise.all([loadCountries(), loadJSON('data/countries-110m.json')]);
-  const feats110 = toFeatures(topo110);
-  const info = f => byId.get(f.id);
+  const pid = f => countryId(f.id);
+  const tipHTML = c => `<b>${flagHTML(c.iso2, c.ko, 16)}${esc(c.ko)}</b>`
+    + `<span class="dim">${esc(c.en)} · ${CONT[c.cont] ?? ''}</span><br>`
+    + `<span style="color:var(--gold-strong)">${esc(app.statusText(countryId(c.id)))}</span>`;
 
+  const feats110 = toFeatures(topo110);
   const m = createMap(container, {
     projection: d3.geoNaturalEarth1(),
     fitObject: { type: 'FeatureCollection', features: feats110 },
@@ -30,21 +40,60 @@ export async function worldView(container) {
     graticule: true,
     label: '방문 국가가 색칠된 세계 지도',
     maxZoom: 12,
-    classOf,
-    tip: f => tipHTML(info(f)),
+    classOf: f => app.classFor(pid(f)),
+    tip: f => tipHTML(byId.get(f.id)),
+    onClick: (e, f, el) => app.onPlace(e, pid(f), el, d3.pointer(e, m.root.node())),
+    onZoomStart: app.onZoomStart,
+    onBackground: app.onBackground,
   });
   if (!m) return null;
+  m.view = 'world';
   m.setFeatures(feats110);
 
-  // 작은 나라 원형 마커(PRD 8.3): 지도에서 너무 작은 국가와 지도에 모양이 없는 국가
-  for (const c of list.filter(x => x.marker)) {
-    const g = m.pin(m.markers, m.proj(c.ll), 'small-country');
-    g.append('circle').attr('class', 'marker').attr('r', m.w > 720 ? 4 : 3);
-    m.hover(g, tipHTML(c));
-  }
+  // 같은 나라의 path 중 가장 큰 것(긁기 연출·확대 기준)
+  m.pathOf = placeId => {
+    let best = null, area = -1;
+    m.sel.filter(f => pid(f) === placeId).each(function (f) { const a = m.path.area(f); if (a > area) { area = a; best = this; } });
+    return best;
+  };
 
-  // 자세한 50m 지도로 바꾸기(같은 투영 유지)
-  loadJSON('data/countries-50m.json').then(topo50 => {
+  // 작은 나라 원형 마커(PRD 8.3): 지도에서 너무 작은 국가와 지도에 모양이 없는 국가
+  const r = m.w > 720 ? 4 : 3;
+  const markerSel = list.filter(c => c.marker).map(c => {
+    const g = m.pin(m.markers, m.proj(c.ll), 'small-country');
+    const circle = g.append('circle').attr('r', r).datum(c);
+    m.hover(g, () => tipHTML(c));
+    g.on('click', e => { e.stopPropagation(); app.onPlace(e, countryId(c.id), m.pathOf(countryId(c.id)), m.proj(c.ll)); });
+    return circle;
+  });
+
+  m.redraw = () => {
+    m.refresh();
+    markerSel.forEach(cl => cl.attr('class', `marker ${app.classFor(countryId(cl.datum().id))}`));
+    m.pins.selectAll('*').remove();
+    for (const placeId of app.stars('world')) {
+      const c = byId.get(placeId.slice(8));
+      if (!c) continue;
+      const g = addStar(m.pin(m.pins, m.proj(c.ll)), 14);
+      m.hover(g, () => tipHTML(c));
+      g.on('click', e => { e.stopPropagation(); app.onPlace(e, placeId, m.pathOf(placeId), m.proj(c.ll)); });
+    }
+  };
+
+  // 검색 등으로 장소를 찾아갈 때: { el, xy(지도 좌표), bounds }
+  m.target = placeId => {
+    const c = byId.get(placeId.slice(8));
+    if (!c) return null;
+    const el = m.pathOf(placeId);
+    const xy = m.proj(c.ll);
+    const bounds = el ? mainBounds(m.path, d3.select(el).datum()) : [[xy[0] - 4, xy[1] - 4], [xy[0] + 4, xy[1] + 4]];
+    return { el, xy, bounds };
+  };
+
+  m.redraw();
+
+  // 자세한 50m 지도로 바꾸기(같은 투영 유지). 같은 나라의 path는 그대로 두고 모양만 바꿉니다.
+  m.ready = loadJSON('data/countries-50m.json').then(topo50 => {
     if (m.svg.node().isConnected) m.setFeatures(toFeatures(topo50));
   }).catch(err => console.warn('50m 지도를 불러오지 못해 110m로 유지합니다.', err));
 
