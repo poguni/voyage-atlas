@@ -36,11 +36,32 @@ export function tripIncludes(trip, placeId, places = {}) {
   });
 }
 
-// 방문 횟수 = 이 장소가 들어간 여행 수. 여행이 없으면 '방문함' 단순 표시(또는 그 안의 방문 장소)는 1회.
+// ---------- 날짜 ----------
+const pad = n => String(n).padStart(2, '0');
+export const todayStr = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const toUTC = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +(s.slice(8, 10) || 1));
+const DAY = 864e5;
+const fromUTC = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+
+// 여행이 이미 시작했는지(미래 여행은 아직 '방문'이 아님). 날짜 미상 여행은 지난 여행으로 봅니다.
+// 'YYYY-MM'(연·월만)도 문자열 비교로 처리됩니다: '2026-10' <= '2026-10-15'
+export const tripStarted = (trip, today = todayStr()) => !trip.start || trip.start <= today;
+export const isUpcoming = (trip, today = todayStr()) => !tripStarted(trip, today);
+
+// 여행 일수(종료일 − 시작일 + 1). 날짜가 일 단위가 아니면 null
+export function tripDays(trip) {
+  if (trip.datePrecision !== 'day' || !trip.start) return null;
+  return Math.round((toUTC(trip.end || trip.start) - toUTC(trip.start)) / DAY) + 1;
+}
+
+// 목표 날짜까지 남은 날(D-day). 'YYYY-MM'은 그달 1일 기준
+export const dday = (target, today = todayStr()) => (target ? Math.round((toUTC(target) - toUTC(today)) / DAY) : null);
+
+// 방문 횟수 = 이 장소가 들어간(이미 시작한) 여행 수. 여행이 없으면 '방문함' 단순 표시(또는 그 안의 방문 장소)는 1회.
 // 여행 기록이 생기면 단순 표시는 그 기록에 흡수됩니다(PRD v0.3).
-export function visitCount(state, placeId) {
+export function visitCount(state, placeId, today = todayStr()) {
   const places = state.places ?? {};
-  const trips = (state.trips ?? []).filter(t => tripIncludes(t, placeId, places)).length;
+  const trips = (state.trips ?? []).filter(t => tripStarted(t, today) && tripIncludes(t, placeId, places)).length;
   if (trips > 0) return trips;
   if (places[placeId]?.status === 'visited') return 1;
   // 국가 안의 시도·도시를 방문했으면 국가도 방문(F2-8). 대한민국도 방문 국가로 셉니다.
@@ -91,3 +112,112 @@ export function koreaStats(state) {
 }
 
 export const nextGoal = n => GOALS.find(g => g > n) ?? null;
+
+// ---------- 여행(Trip) 통계 ----------
+// 국내 여행 = 모든 경유지가 대한민국 안(PRD 10.3)
+export const isDomestic = (trip, places = {}) =>
+  (trip.stops ?? []).length > 0 && trip.stops.every(s => countryOf(s.placeId, places) === KOREA);
+
+export const tripYear = trip => (trip.start ? +trip.start.slice(0, 4) : null);
+
+// 여행 날짜들을 합집합으로 모아 일수를 셉니다(겹친 출장·여행은 하루로 한 번만).
+// year를 주면 그해 날짜만. 연·월만 있거나 날짜 미상인 여행은 unknownTrips로 따로 셉니다.
+export function daysSummary(state, { today = todayStr(), year = null } = {}) {
+  const places = state.places ?? {};
+  const all = new Set(), overseas = new Set(), domestic = new Set();
+  let unknownTrips = 0;
+  for (const t of state.trips ?? []) {
+    if (!tripStarted(t, today)) continue;
+    if (t.datePrecision !== 'day' || !t.start) {
+      if (year == null || tripYear(t) === year) unknownTrips++;
+      continue;
+    }
+    const target = isDomestic(t, places) ? domestic : overseas;
+    for (let d = toUTC(t.start), end = toUTC(t.end || t.start); d <= end; d += DAY) {
+      const key = fromUTC(d);
+      if (year != null && +key.slice(0, 4) !== year) continue;
+      all.add(key); target.add(key);
+    }
+  }
+  return { total: all.size, overseas: overseas.size, domestic: domestic.size, unknownTrips };
+}
+
+// 연도별 여행 일수 [{ year, days }] (오래된 해부터). 연말을 넘는 여행은 해마다 나눠 셉니다.
+export function daysByYear(state, today = todayStr()) {
+  const years = new Set();
+  for (const t of state.trips ?? []) {
+    if (!tripStarted(t, today) || t.datePrecision !== 'day' || !t.start) continue;
+    for (let y = tripYear(t), last = +(t.end || t.start).slice(0, 4); y <= last; y++) years.add(y);
+  }
+  return [...years].sort().map(year => ({ year, days: daysSummary(state, { today, year }).total }));
+}
+
+// 여행이 있는 해(최근 해부터)
+export const tripYears = (state, today = todayStr()) =>
+  [...new Set((state.trips ?? []).filter(t => tripStarted(t, today) && t.start).map(tripYear))].sort((a, b) => b - a);
+
+// 특정 해 여행으로 방문한 국가 ID 목록(통계 화면의 연도 보기)
+export function countriesInYear(state, year, today = todayStr()) {
+  const set = new Set();
+  for (const t of state.trips ?? []) {
+    if (!tripStarted(t, today) || tripYear(t) !== year) continue;
+    for (const s of t.stops ?? []) { const c = countryOf(s.placeId, state.places); if (c) set.add(c); }
+  }
+  return [...set];
+}
+
+// 가장 많이 간 나라 [{ id, count, cities: [이름] }]
+export function countryRanking(state, countries, { limit = 5, today = todayStr() } = {}) {
+  const places = state.places ?? {};
+  const rows = [];
+  for (const c of countries) {
+    const count = visitCount(state, countryId(c.id), today);
+    if (!count) continue;
+    const cities = new Set();
+    for (const t of state.trips ?? []) {
+      if (!tripStarted(t, today)) continue;
+      for (const s of t.stops ?? []) {
+        if (s.placeId.startsWith('country:') || countryOf(s.placeId, places) !== c.id) continue;
+        const p = places[s.placeId];
+        const name = p?.name_ko || p?.name_en;
+        if (name) cities.add(name);
+      }
+    }
+    rows.push({ id: c.id, count, cities: [...cities] });
+  }
+  return rows.sort((a, b) => b.count - a.count || b.cities.length - a.cities.length).slice(0, limit);
+}
+
+export const COMPANIONS = { solo: '혼자', family: '가족', friends: '친구', partner: '연인', business: '출장' };
+
+// 기록으로 본 나: 가장 긴 여행, 가장 자주 떠난 달, 가장 많은 동행, 위시 달성, 첫 해외여행 이후 햇수
+export function recordFacts(state, today = todayStr()) {
+  const places = state.places ?? {};
+  const trips = (state.trips ?? []).filter(t => tripStarted(t, today));
+  let longest = null;
+  for (const t of trips) { const d = tripDays(t); if (d && (!longest || d > longest.days)) longest = { trip: t, days: d }; }
+  const months = {};
+  for (const t of trips) if (t.start && t.start.length >= 7) { const m = +t.start.slice(5, 7); months[m] = (months[m] ?? 0) + 1; }
+  const topMonthEntry = Object.entries(months).sort((a, b) => b[1] - a[1])[0];
+  const comp = {};
+  for (const t of trips) if (t.companion) comp[t.companion] = (comp[t.companion] ?? 0) + 1;
+  const topComp = Object.entries(comp).sort((a, b) => b[1] - a[1])[0];
+  const wish = state.wishlist ?? [];
+  const firstOverseas = trips.filter(t => t.start && !isDomestic(t, places)).map(t => t.start).sort()[0];
+  return {
+    longest,
+    topMonth: topMonthEntry ? { month: +topMonthEntry[0], count: topMonthEntry[1] } : null,
+    companion: topComp ? { type: topComp[0], pct: Math.round(topComp[1] / trips.length * 100) } : null,
+    wish: { done: wish.filter(w => w.doneAt).length, total: wish.length },
+    yearsSinceFirstOverseas: firstOverseas ? +today.slice(0, 4) - +firstOverseas.slice(0, 4) : null,
+    firstOverseasYear: firstOverseas ? +firstOverseas.slice(0, 4) : null,
+  };
+}
+
+// 한 장소의 방문 기록(이 장소가 들어간 여행, 최근 것부터)과 첫·최근 방문
+export function placeVisits(state, placeId, today = todayStr()) {
+  const trips = (state.trips ?? []).filter(t => tripStarted(t, today) && tripIncludes(t, placeId, state.places))
+    .sort((a, b) => (b.start ?? '').localeCompare(a.start ?? ''));
+  const dated = trips.filter(t => t.start).map(t => t.start).sort();
+  return { trips, first: dated[0] ?? null, last: dated.at(-1) ?? null };
+}
