@@ -1,0 +1,33 @@
+# 나의 여정 지도(Voyage Atlas): 데이터 출처와 라이선스
+
+앱 설정 화면의 "데이터 출처"(Phase 1)에도 같은 내용을 표시합니다.
+
+| 데이터 | 출처 | 버전 | 라이선스 | 앱 파일 |
+|---|---|---|---|---|
+| 세계 국가 경계 | [world-atlas](https://github.com/topojson/world-atlas) (Natural Earth 기반) | 2.0.2 | ISC / Natural Earth는 퍼블릭 도메인 | `data/countries-110m.json`, `data/countries-50m.json` |
+| 한국 행정구역 경계 | 통계청 SGIS 행정동 경계를 [vuski/admdongkor](https://github.com/vuski/admdongkor)가 가공 | ver20260701 | CC BY 4.0(원자료 공공누리 제1유형), 출처 표기 필수 | `data/korea-sido.json`, `data/korea-sigungu.json` |
+| 국기 이미지 | [flag-icons](https://github.com/lipis/flag-icons) 4:3 SVG | 7.5.0 | MIT | `assets/flags/*.svg` |
+| ISO 국가 코드·영어 이름 | [i18n-iso-countries](https://github.com/michaelwittig/node-i18n-iso-countries) | 7.14.0 | MIT | `data/countries.ko.json`(전처리에만 사용) |
+| 국가 한국어 이름·대륙·UN 지위 | 직접 작성(`tools/country-meta.mjs`) | - | - | `data/countries.ko.json` |
+| 도시(Phase 2) | GeoNames `cities15000` | - | CC BY 4.0 | `data/cities.json`(예정) |
+
+## 필수 출처 표기 (한국 경계)
+
+admdongkor `LICENSE-DATA` 3항에 따라 앱 설정 화면과 이 문서에 아래 문구를 유지합니다. 우리 앱은 이 데이터를 시도·시군구로 합치고 단순화하는 추가 가공을 했습니다.
+
+> 본 데이터는 통계청 통계지리정보서비스(SGIS, https://sgis.kostat.go.kr)에서 공공누리 제1유형으로 개방한 행정동 경계를 가공한 것이며(가공: vuski/admdongkor, https://github.com/vuski/admdongkor), CC BY 4.0으로 배포됩니다.
+
+## 처리 규칙
+
+### 세계
+- 남극은 그리지 않습니다.
+- ISO 숫자 코드가 없는 지형(코소보, 북키프로스, 소말릴란드, 오스트레일리아령 인도양 지역, 시아첸 빙하)은 `x-` 로 시작하는 ID를 씁니다.
+- 국가 수 기준은 UN 회원국 193 + 옵서버 2(바티칸, 팔레스타인) = 195입니다. 대만·홍콩·마카오·그린란드·코소보 등 45곳은 '지역'으로 따로 셉니다.
+- 대륙별 국가 수: 아시아 47, 유럽 45, 아프리카 54, 북아메리카 23, 남아메리카 12, 오세아니아 14. 러시아·키프로스는 유럽, 튀르키예·조지아·아르메니아·아제르바이잔·카자흐스탄은 아시아, 이집트는 아프리카로 분류합니다.
+- 투발루는 50m 지도에 모양이 없어 마커로만 표시합니다.
+
+### 대한민국
+- 2026년 7월 1일 광주광역시와 전라남도가 **전남광주통합특별시**(코드 12)로 통합되었습니다. 지도에서는 여행 기록을 구분하기 쉽도록 **광주권**(옛 광주광역시 5개 구, 앱 코드 29)과 **전남권**(앱 코드 46)으로 나누어 **17칸**으로 표시합니다. 툴팁에는 행정구역 명칭(전남광주통합특별시)을 함께 보여 줍니다.
+- 나머지 시도는 행정표준코드를 씁니다: 서울 11, 부산 26, 대구 27, 인천 28, 대전 30, 울산 31, 세종 36, 경기 41, 충북 43, 충남 44, 경북 47, 경남 48, 제주 50, 강원 51, 전북 52.
+- **독도**: 원본의 울릉읍 경계에 있는 독도 폴리곤 2개(동도·서도)를 단순화 뒤에도 원본 그대로 다시 넣어 경상북도(시도)와 울릉군(시군구)에 포함합니다. 지도에는 마커와 "독도" 라벨을 항상 표시합니다.
+- 단순화: 시도 250m, 시군구 120m 간격(mapshaper `interval`). D3 기준에 맞게 폴리곤 감는 방향을 바꿔 저장합니다.
