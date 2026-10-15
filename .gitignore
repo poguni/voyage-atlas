@@ -1,0 +1,9 @@
+# 개발 도구(npm)로 설치한 패키지: package.json, package-lock.json으로 다시 설치
+node_modules/
+
+# 데이터 전처리용 원본 다운로드(수십 MB): npm run data가 다시 받음
+tools/.cache/
+
+# 도구가 만드는 상태·캡처 파일
+.omc/
+.playwright-mcp/
