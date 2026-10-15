@@ -141,7 +141,7 @@ td:first-child{white-space:nowrap}
 </thead>
 <tbody><tr>
 <td>문서 버전</td>
-<td>v1.1</td>
+<td>v1.2</td>
 </tr>
 <tr>
 <td>작성일</td>
@@ -286,7 +286,7 @@ td:first-child{white-space:nowrap}
 <td>빈 앱에 세계·한국 지도가 시안 스타일로 그려지고, 데이터 검증 테스트 통과</td>
 </tr>
 <tr>
-<td><strong>1</strong></td>
+<td><strong>1</strong> ✅</td>
 <td>지도와 색칠</td>
 <td>M1</td>
 <td>클릭 팝오버, 빠른 색칠, 금박 긁기, 실행 취소, HUD, 검색, 자동 저장, JSON 백업</td>
@@ -562,7 +562,32 @@ td:first-child{white-space:nowrap}
 </ul>
 <h3>완료 기준</h3>
 <p>다녀온 모든 나라·시도를 색칠하고 새로고침해도 유지되며, JSON 백업 파일로 다른 브라우저에서 복원됩니다.</p>
-<h3>추천 커밋</h3>
+<h3>진행 결과 (2026-10-15 완료)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>테스트</td>
+<td>32개 통과(데이터 16, 통계·백업 13, 한글 검색 3)</td>
+</tr>
+<tr>
+<td>브라우저 확인</td>
+<td>팝오버 → 금박 긁기 → HUD 갱신 → 실행 취소, 빠른 색칠(켜기·끄기), 위시 별·점선, 경유 빗금, 한국 시도 → 대한민국 자동 방문, 초성 검색(ㅈㅈ → 제주, ㅍㄹㅅ → 프랑스) → 확대 + 팝오버(키보드 포커스), 목록으로 색칠, 새로 고침 후 유지, JSON 백업 → 초기화(2단계) → 덮어쓰기 복원, 애니메이션 줄이기, 1440·1024·390px</td>
+</tr>
+<tr>
+<td>계획과 달라진 점</td>
+<td>① 설정·목록 버튼을 위쪽 도구줄에 추가(시안에 없는 화면의 진입점) ② 검색 안내 문구는 도시 데이터가 들어오는 Phase 2 전까지 &quot;나라·시도 검색&quot; ③ HUD &#39;여행 일수&#39;는 여행 기록이 생기는 Phase 2부터 계산(지금은 0) ④ 마일스톤 축하(20개국 등)는 계획대로 Phase 5</td>
+</tr>
+<tr>
+<td>저장 키</td>
+<td>IndexedDB <code>keyval-store</code> / <code>state</code>(기록), localStorage <code>va-settings</code>·<code>va-theme</code>·<code>va-view</code>·<code>va-last-backup</code>(설정·화면 상태)</td>
+</tr>
+</tbody></table>
+</div><h3>추천 커밋</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>

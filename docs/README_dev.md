@@ -26,6 +26,9 @@ python -m http.server 8080
 npm test
 ```
 
+- `tests/stats.test.js`: 방문 횟수(단순 표시 흡수), 대한민국 자동 방문, 경유 포함 여부, 국가·대륙·한국 통계, 백업 왕복·합치기·마이그레이션
+- `tests/hangul.test.js`: 초성 검색
+
 `tests/data.test.js`는 지도·국가·국기 데이터를 검사합니다.
 - 국가 기준(UN 193 + 옵서버 2 = 195), 대륙별 국가 수
 - 세계 지도의 모든 지형이 국가 사전과 연결되는지
@@ -57,11 +60,17 @@ VoyageAtlas/
 ├─ index.html          앱 셸(import map, 글꼴, 공통 SVG 정의)
 ├─ css/                tokens.css(디자인 토큰), app.css(공통 스타일)
 ├─ js/
-│  ├─ main.js          진입점: 보기 전환, 확대 버튼
-│  ├─ env.js           애니메이션 줄이기, 글자 이스케이프
+│  ├─ main.js          진입점: 보기 전환, 장소 클릭(팝오버·빠른 색칠·긁기), HUD·검색·패널 연결
+│  ├─ store.js         상태 저장소(구독 + IndexedDB 자동 저장, 실행 취소용 되돌리기 함수)
+│  ├─ stats.js         방문 횟수·국가·한국 통계(순수 함수, 테스트 대상)
+│  ├─ backup.js        데이터 기본값, 마이그레이션, 백업 파일 만들기·읽기·합치기(순수 함수)
+│  ├─ settings.js      설정(테마, 애니메이션 줄이기, 경유 포함)
+│  ├─ places.js        장소 ID → 이름·국기·대륙
+│  ├─ hangul.js        초성 검색
+│  ├─ env.js           글자 이스케이프, 조사, 숫자 카운트업
 │  ├─ data.js          data/*.json 불러오기, 국가 사전
-│  ├─ map/             engine.js(지도 엔진), world.js(세계), korea.js(대한민국)
-│  └─ ui/              flag.js(국기 이미지), tooltip.js, sky.js(별 배경)
+│  ├─ map/             engine.js(지도 엔진), world.js(세계), korea.js(대한민국), effects.js(금박 긁기·파티클·별)
+│  └─ ui/              popover, hud, search, toast, panel, list-panel, settings-panel, flag(국기 이미지), tooltip, sky
 ├─ data/               지도·국가 데이터(전처리 결과)
 ├─ assets/flags/       국기 SVG
 ├─ tools/              데이터 전처리 스크립트
