@@ -126,6 +126,36 @@ test('한국 시군구: 모든 시군구가 17칸 중 하나에 속하고, 광�
   assert.equal(g.filter(x => x.properties.sido === '29').length, 5);
 });
 
+// ---------- 도시 ----------
+const cityData = json('data/cities.json');
+const cityRows = cityData.cities.rows;
+const cityById = new Map(cityRows.map(r => [r[0], r]));
+
+test('도시: 3만 곳 이상, 모든 도시의 국가가 국가 사전에 있음, 한국은 GeoNames 대신 시군구', () => {
+  assert.ok(cityRows.length > 30000);
+  assert.deepEqual(cityRows.filter(r => !byId.has(r[3])).map(r => r[2]), []);
+  assert.equal(cityRows.filter(r => r[3] === '410').length, 0);
+  assert.ok(cityData.sigungu.rows.length >= 220);
+  assert.deepEqual(cityData.sigungu.rows.filter(r => !KR_CODES.includes(r[2])).map(r => r[1]), []);
+});
+
+test('도시: 주요 여행지 한국어 이름(보강표 포함, " 시" 접미사 없음)', () => {
+  const ko = id => cityById.get(id)?.[1];
+  assert.equal(ko(1850147), '도쿄');
+  assert.equal(ko(1857910), '교토');
+  assert.equal(ko(2735943), '포르투');
+  assert.equal(ko(1572151), '나트랑');
+  assert.equal(ko(2130531), '비에이');      // 작은 관광 도시(인구 1만 5천 미만)
+  assert.ok(cityRows.every(r => !/\s시$/.test(r[1])));
+});
+
+test('시군구: 구가 있는 시는 하나로(수원시), 이름이 겹치는 곳(중구)은 표시', () => {
+  const sgg = cityData.sigungu.rows;
+  assert.ok(sgg.some(r => r[1] === '수원시'));
+  assert.ok(!sgg.some(r => r[1] === '수원시장안구'));
+  assert.ok(sgg.filter(r => r[1] === '중구').every(r => r[5] === 1));
+});
+
 test('지도 데이터 용량 목표', () => {
   const kb = p => statSync(p).size / 1024;
   assert.ok(kb('data/korea-sido.json') <= 200);
