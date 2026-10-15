@@ -1,0 +1,140 @@
+/* ============================================================
+   앱 공통 스타일 (시안 design-mockup.html의 2~3절에서 이전)
+   화면별 스타일(통계·연대기·위시·AI·공유)은 해당 Phase에서 추가합니다.
+   ============================================================ */
+
+/* ---------- 기본 ---------- */
+*{box-sizing:border-box}
+html{scroll-padding-top:64px}
+body{margin:0;font-family:var(--font-sans);color:var(--text);background:var(--bg);word-break:keep-all;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1200px 700px at 85% -10%,var(--bg-nebula-1),transparent 60%),radial-gradient(900px 600px at -10% 110%,var(--bg-nebula-2),transparent 60%);background-attachment:fixed}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold-strong);outline-offset:3px;border-radius:6px}
+#sky{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+:root[data-theme="light"] #sky{opacity:0}
+.svg-defs{position:absolute;width:0;height:0;overflow:hidden}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.screen{position:relative;z-index:1}
+.screen[hidden]{display:none}
+
+/* ---------- 공통 컴포넌트 ---------- */
+.glass{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);box-shadow:var(--shadow)}
+.card{background:var(--panel);border:1px solid var(--line-2);border-radius:var(--radius);padding:22px}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.h-display{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;line-height:1.15;margin:0}
+h1.h-display{font-size:clamp(28px,4vw,44px)}
+h2{margin:0;font-size:18px;font-weight:700}
+.dim{color:var(--text-dim)} .faint{color:var(--text-faint)}
+.mono{font-family:var(--font-mono)}
+.num{font-family:var(--font-display);font-weight:800;font-variant-numeric:tabular-nums lining-nums;letter-spacing:-.03em;line-height:1}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-weight:600;font-size:14px;cursor:pointer;text-decoration:none;transition:transform .2s var(--ease),background .2s}
+.btn:hover{transform:translateY(-1px);background:var(--panel-3)}
+.btn-primary{border:0;color:var(--on-gold);background:linear-gradient(135deg,var(--gold-strong),var(--gold) 45%,var(--gold-deep));box-shadow:0 8px 24px rgba(232,201,138,.25),inset 0 1px 0 rgba(255,255,255,.5)}
+.btn-primary:hover{background:linear-gradient(135deg,var(--gold-strong),var(--gold) 35%,var(--gold-deep))}
+.btn-ghost{background:transparent}
+.btn-sm{min-height:34px;padding:0 12px;font-size:13px}
+.icon-btn{width:44px;height:44px;padding:0;border-radius:50%}
+
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);font-size:13px;color:var(--text-dim);white-space:nowrap}
+.chip b{color:var(--text);font-weight:600}
+.chip.on{border-color:var(--gold);color:var(--gold-strong)}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--panel-3);color:var(--text-dim)}
+.tag.gold{background:rgba(232,201,138,.16);color:var(--gold-strong)}
+.tag.wish{background:rgba(255,209,102,.14);color:var(--wish)}
+
+.seg{display:inline-flex;padding:4px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line-2)}
+.seg button{min-height:36px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--text-dim);cursor:pointer;font-size:14px;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--gold);color:var(--on-gold)}
+.seg button:disabled{cursor:not-allowed;opacity:.45}
+
+.switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text-dim)}
+.switch input{appearance:none;width:42px;height:24px;border-radius:999px;background:var(--panel-3);border:1px solid var(--line);position:relative;cursor:pointer;margin:0;transition:background .2s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--text-dim);transition:transform .25s var(--ease),background .2s}
+.switch input:checked{background:linear-gradient(135deg,var(--gold),var(--gold-deep))}
+.switch input:checked::after{transform:translateX(18px);background:var(--on-gold)}
+
+.progress{height:6px;border-radius:999px;background:var(--panel-3);overflow:hidden}
+.progress > span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--v1),var(--v2),var(--v3))}
+
+/* ---------- 국기 (이모지 대신 SVG 이미지, DESIGN.md 12장) ---------- */
+.flag{display:inline-block;flex:none;height:var(--flag-h,20px);width:calc(var(--flag-h,20px) * 4 / 3);border-radius:3px;border:1px solid var(--line-2);object-fit:cover;vertical-align:middle;background:var(--panel-3)}
+.flag-neutral{display:inline-grid;place-items:center;color:var(--text-faint)}
+.flag-neutral svg{width:70%;height:70%}
+
+/* ---------- 지도 공통 ---------- */
+.map-svg{display:block;width:100%;height:100%;touch-action:none}
+.map-svg .sphere{fill:var(--sphere);stroke:var(--line);stroke-width:1}
+.map-svg .graticule{fill:none;stroke:var(--graticule);stroke-width:.6}
+.map-svg .land path{stroke:var(--foil-edge);stroke-width:.5;vector-effect:non-scaling-stroke;transition:fill .5s,opacity .3s;cursor:pointer}
+.map-svg .land path.unv{fill:url(#foil)}
+.map-svg .land path.unv:hover{fill:url(#foilHover)}
+.map-svg .land path.lv1{fill:var(--v1)} .map-svg .land path.lv2{fill:var(--v2)} .map-svg .land path.lv3{fill:var(--v3)} .map-svg .land path.lv4{fill:var(--v4)}
+.map-svg .land path[class*="lv"]{stroke:rgba(7,11,31,.55)}
+.map-svg .land path[class*="lv"]:hover{filter:brightness(1.15)}
+.map-svg .land path.transit{fill:url(#hatch)}
+.map-svg .land path.wishc{stroke:var(--wish);stroke-width:1.4;stroke-dasharray:3 3}
+.map-svg .land.dim path:not(.hl){opacity:.35}
+.map-svg .glow{filter:url(#glow)}
+.map-svg .route{fill:none;stroke:var(--gold-strong);stroke-width:1.6;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.map-svg .route-shadow{fill:none;stroke:var(--gold);stroke-width:6;opacity:.18;vector-effect:non-scaling-stroke}
+.map-svg .label{font-size:11px;font-weight:600;fill:var(--text);paint-order:stroke;stroke:var(--bg);stroke-width:3px;pointer-events:none;text-anchor:middle}
+.map-svg .marker{fill:var(--foil-3);stroke:var(--bg);stroke-width:1;cursor:pointer;vector-effect:non-scaling-stroke}
+.map-svg .marker:hover{fill:var(--gold-strong)}
+/* 독도 마커: 반투명 고리라서 확대하면 안쪽에 동도·서도 경계가 보입니다. */
+.map-svg .labels .minor[hidden]{display:none}
+.map-svg .marker.dokdo-ring{fill-opacity:.35;stroke:var(--gold-strong);stroke-width:1.4}
+.star{cursor:pointer}
+.star .core{fill:var(--wish)}
+.star .halo{fill:url(#starHalo)}
+.twinkle{animation:twinkle var(--tw,4s) ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes twinkle{0%,100%{opacity:.75;transform:scale(.9)}50%{opacity:1;transform:scale(1.12)}}
+.pulse{animation:pulse 1.6s ease-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{0%{opacity:.8;transform:scale(.6)}100%{opacity:0;transform:scale(2.4)}}
+
+.tip{position:fixed;z-index:80;pointer-events:none;padding:10px 12px;border-radius:12px;background:var(--panel-solid);border:1px solid var(--line);box-shadow:var(--shadow);font-size:13px;min-width:150px;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s}
+.tip.show{opacity:1;transform:none}
+.tip b{display:flex;align-items:center;gap:8px;font-size:15px;margin-bottom:2px}
+.tip .flag{--flag-h:16px}
+
+.fx-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
+
+/* 지도 데이터 불러오는 중: 금박 스켈레톤(DESIGN.md 11장) */
+.map-skeleton{position:absolute;inset:12% 8%;border-radius:40px;opacity:.5;
+  background:linear-gradient(110deg,var(--foil-2) 20%,var(--foil-3) 40%,var(--foil-2) 60%) 0 0/300% 100%;animation:foil-sheen 1.2s linear infinite}
+@keyframes foil-sheen{from{background-position:100% 0}to{background-position:-50% 0}}
+.map-error{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--text-dim)}
+
+/* ---------- 지도 무대 ---------- */
+.stage{position:relative;height:100vh;height:100dvh;min-height:680px;overflow:hidden}
+.stage > .map-wrap{position:absolute;inset:0}
+.overlay{position:absolute;z-index:6}
+
+.topbar{top:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;padding:8px}
+.search{display:flex;align-items:center;gap:8px;min-width:260px;min-height:40px;padding:0 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text-faint);font-size:14px}
+.legend{left:20px;bottom:24px;padding:12px 16px;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--text-dim);max-width:min(560px,calc(50% - 250px))}
+.legend .sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-3px;margin-right:6px}
+.legend[hidden]{display:none}
+.tabbar{left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;border-radius:999px}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:68px;padding:8px 10px;border-radius:999px;color:var(--text-dim);text-decoration:none;font-size:11px;font-weight:600}
+.tabbar a svg{width:20px;height:20px}
+.tabbar a.on{background:var(--gold);color:var(--on-gold)}
+.tabbar a[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+.zoom-ctl{right:20px;bottom:24px;display:flex;flex-direction:column;gap:8px}
+
+@media (max-width:720px){
+  .stage{height:auto;min-height:0;display:flex;flex-direction:column}
+  .stage > .map-wrap{position:relative;height:62vh;min-height:380px}
+  .overlay{position:relative;inset:auto;transform:none;left:auto;right:auto;top:auto;bottom:auto;margin:12px 16px 0;width:auto}
+  .legend{max-width:none}
+  .topbar{order:-1;flex-wrap:wrap}
+  .search{min-width:0;flex:1 1 100%}
+  .tabbar,.zoom-ctl{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>나의 여정 지도 · Voyage Atlas</title>
+<meta name="description" content="다녀온 곳은 금박을 긁어 빛나게, 가고 싶은 곳은 별로 새기는 나만의 세계 지도">
+<meta name="theme-color" content="#070B1F">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Crect x='-12' y='-12' width='24' height='24' rx='6' fill='%23070B1F'/%3E%3Cpath fill='%23E8C98A' d='M0-9C1-3 3-1 9 0 3 1 1 3 0 9-1 3-3 1-9 0-3-1-1-3 0-9Z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,500&family=Noto+Serif+KR:wght@500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/app.css">
+<script type="importmap">
+{
+  "imports": {
+    "d3": "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm",
+    "topojson-client": "https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/+esm"
+  }
+}
+</script>
+<script>
+  // 저장된 테마를 첫 그리기 전에 적용(깜빡임 방지)
+  try { const t = localStorage.getItem('va-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<!-- 공통 SVG 정의: 금박, 빗금, 효과 필터, 별 (DESIGN.md 14장 2항: display:none 대신 크기 0으로 숨김) -->
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1" spreadMethod="reflect">
+      <stop offset="0" style="stop-color:var(--foil-3)"/>
+      <stop offset=".35" style="stop-color:var(--foil-1)"/>
+      <stop offset=".55" style="stop-color:var(--foil-2)"/>
+      <stop offset=".8" style="stop-color:var(--foil-3)"/>
+      <stop offset="1" style="stop-color:var(--foil-1)"/>
+      <animateTransform class="smil" attributeName="gradientTransform" type="translate" values="-0.6 -0.6;0.6 0.6;-0.6 -0.6" dur="9s" repeatCount="indefinite"/>
+    </linearGradient>
+    <linearGradient id="foilHover" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" style="stop-color:var(--gold-strong)"/>
+      <stop offset=".5" style="stop-color:var(--foil-3)"/>
+      <stop offset="1" style="stop-color:var(--gold-strong)"/>
+    </linearGradient>
+    <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="6" height="6" style="fill:var(--foil-2)"/>
+      <line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--transit)" stroke-width="3"/>
+    </pattern>
+    <radialGradient id="starHalo"><stop offset="0" stop-color="#FFE7A3" stop-opacity=".9"/><stop offset=".4" stop-color="#FFD166" stop-opacity=".35"/><stop offset="1" stop-color="#FFD166" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ocean" cx=".38" cy=".32" r=".75"><stop offset="0" style="stop-color:var(--panel-3)"/><stop offset="1" style="stop-color:var(--bg)"/></radialGradient>
+    <radialGradient id="atmo"><stop offset=".78" stop-color="#6CB8FF" stop-opacity="0"/><stop offset=".86" stop-color="#6CB8FF" stop-opacity=".28"/><stop offset=".93" stop-color="#9B5DE5" stop-opacity=".12"/><stop offset="1" stop-color="#9B5DE5" stop-opacity="0"/></radialGradient>
+    <filter id="rough" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="38" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="1" seed="3" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 .95  0 0 0 0 .8  0 0 0 .22 0" result="g"/>
+      <feComposite in="g" in2="SourceGraphic" operator="in" result="gi"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="gi"/></feMerge>
+    </filter>
+    <symbol id="sparkle" viewBox="-12 -12 24 24"><path d="M0-11C1.2-3.5 3.5-1.2 11 0 3.5 1.2 1.2 3.5 0 11-1.2 3.5-3.5 1.2-11 0-3.5-1.2-1.2-3.5 0-11Z"/></symbol>
+  </defs>
+</svg>
+
+<h1 class="sr-only">나의 여정 지도</h1>
+
+<!-- ===================== 지도 홈 ===================== -->
+<main class="screen" id="home" aria-label="지도">
+  <div class="stage">
+    <div class="map-wrap" id="map"><div class="map-skeleton" aria-hidden="true"></div></div>
+
+    <div class="overlay glass topbar">
+      <div class="seg" role="group" aria-label="지도 보기" id="viewSeg">
+        <button type="button" data-view="world" aria-pressed="true">세계</button>
+        <button type="button" data-view="korea" aria-pressed="false">대한민국</button>
+        <button type="button" data-view="globe" aria-pressed="false" disabled title="준비 중(Phase 5)">지구본</button>
+      </div>
+      <div class="search" role="search" aria-disabled="true" title="준비 중(Phase 1)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>나라·도시 검색 (초성 ㅍㄹㅅ 가능)</div>
+    </div>
+
+    <div class="overlay glass legend" aria-label="범례" id="legendWorld">
+      <span><i class="sw" style="background:linear-gradient(135deg,var(--foil-3),var(--foil-2))"></i>미방문(금박)</span>
+      <span><i class="sw" style="background:var(--v1)"></i>1회</span>
+      <span><i class="sw" style="background:var(--v2)"></i>2회</span>
+      <span><i class="sw" style="background:var(--v3)"></i>3회</span>
+      <span><i class="sw" style="background:var(--v4)"></i>4회 이상</span>
+      <span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--transit) 0 3px,var(--foil-2) 3px 6px)"></i>경유</span>
+      <span><svg width="14" height="14" viewBox="-12 -12 24 24" style="vertical-align:-3px;margin-right:6px;fill:var(--wish)" aria-hidden="true"><use href="#sparkle" x="-12" y="-12" width="24" height="24"/></svg>위시</span>
+    </div>
+    <div class="overlay glass legend" aria-label="범례" id="legendKorea" hidden>
+      <span><i class="sw" style="background:linear-gradient(135deg,var(--foil-3),var(--foil-2))"></i>미방문</span>
+      <span><i class="sw" style="background:var(--v1)"></i>1회</span><span><i class="sw" style="background:var(--v2)"></i>2회</span><span><i class="sw" style="background:var(--v3)"></i>3회</span><span><i class="sw" style="background:var(--v4)"></i>4회 이상</span>
+      <span class="faint">시도를 두 번 누르면 시군구로 확대(P1)</span>
+    </div>
+
+    <div class="overlay zoom-ctl">
+      <button class="btn icon-btn glass" type="button" id="zIn" aria-label="확대">＋</button>
+      <button class="btn icon-btn glass" type="button" id="zOut" aria-label="축소">－</button>
+      <button class="btn icon-btn glass" type="button" id="zReset" aria-label="전체 보기">⤢</button>
+    </div>
+
+    <nav class="overlay glass tabbar" aria-label="주요 화면">
+      <a href="#home" class="on" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>지도</a>
+      <a href="#trips" aria-disabled="true" title="준비 중"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 4v16M5 6h10l-2 3 2 3H5"/></svg>연대기</a>
+      <a href="#wish" aria-disabled="true" title="준비 중"><svg viewBox="-12 -12 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M0-10C1-3 3-1 10 0 3 1 1 3 0 10-1 3-3 1-10 0-3-1-1-3 0-10Z"/></svg>위시</a>
+      <a href="#ai" aria-disabled="true" title="준비 중"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/><circle cx="12" cy="12" r="3"/></svg>AI 추천</a>
+      <a href="#stats" aria-disabled="true" title="준비 중"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>통계</a>
+      <a href="#share" aria-disabled="true" title="준비 중"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v5h14v-5"/></svg>공유</a>
+    </nav>
+  </div>
+</main>
+
+<div class="tip" id="tip" role="tooltip"></div>
+</body>
+</html>

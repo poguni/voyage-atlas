@@ -1,0 +1,56 @@
+/* ============================================================
+   디자인 토큰 (design/DESIGN.md 3장)
+   다크(밤하늘)가 기본, 라이트(빈티지 지도)는 :root[data-theme="light"]
+   ============================================================ */
+:root{
+  /* 글꼴 */
+  --font-sans:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  --font-display:"Fraunces","Noto Serif KR",Georgia,serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  /* 배경과 표면 */
+  --bg:#070B1F; --bg-2:#0E1538;
+  --bg-nebula-1:rgba(155,93,229,.20); --bg-nebula-2:rgba(46,196,182,.12);
+  --panel:rgba(17,24,58,.72); --panel-solid:#121A3D; --panel-2:#19224D; --panel-3:#222C5C;
+  --line:rgba(232,201,138,.18); --line-2:rgba(255,255,255,.08);
+
+  /* 금박 */
+  --gold:#E8C98A; --gold-strong:#F6DFAE; --gold-deep:#B8893E; --on-gold:#1A1408;
+  --foil-1:#8E7646; --foil-2:#5A4829; --foil-3:#B49A63; --foil-edge:rgba(246,223,174,.30);
+
+  /* 방문 단계(오로라) */
+  --v1:#2EC4B6; --v2:#4C8DFF; --v3:#9B5DE5; --v4:#F15BB5;
+  --wish:#FFD166; --transit:#7A86B8;
+
+  /* 글자 */
+  --text:#F5F1E8; --text-dim:#B3BAD8; --text-faint:#8089B0;
+
+  /* 지도 보조 */
+  --graticule:rgba(179,186,216,.07); --sphere:rgba(255,255,255,.02);
+
+  /* AI 모델 */
+  --claude:#FF8A65; --gpt:#5EE2B0; --gemini:#6CB8FF;
+
+  /* 상태 */
+  --ok:#5EE2B0; --warn:#FFB347;
+
+  /* 형태 */
+  --shadow:0 24px 64px rgba(0,0,0,.45);
+  --radius-lg:24px; --radius:18px; --radius-sm:12px;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+:root[data-theme="light"]{
+  --bg:#F3EADA; --bg-2:#EADDC4;
+  --bg-nebula-1:rgba(201,52,143,.08); --bg-nebula-2:rgba(15,143,132,.08);
+  --panel:rgba(255,250,240,.84); --panel-solid:#FFF9EE; --panel-2:#F6EEDD; --panel-3:#EDE2CB;
+  --line:rgba(122,90,36,.24); --line-2:rgba(60,40,10,.10);
+  --gold:#8A6420; --gold-strong:#6E4E14; --gold-deep:#8A6420; --on-gold:#FFF9EE;
+  --foil-1:#D6C39A; --foil-2:#C3AC7E; --foil-3:#E4D6B4; --foil-edge:rgba(110,80,30,.35);
+  --v1:#0F8F84; --v2:#2F67D8; --v3:#7A3FC4; --v4:#C9348F;
+  --wish:#C98A00; --transit:#9A8F7A;
+  --text:#2B2418; --text-dim:#5E5240; --text-faint:#7A6C55;
+  --graticule:rgba(90,70,40,.10); --sphere:rgba(90,70,40,.03);
+  --claude:#D9562E; --gpt:#12936A; --gemini:#2A78C9;
+  --ok:#12936A; --warn:#B86A00;
+  --shadow:0 20px 50px rgba(80,60,20,.18);
+}
