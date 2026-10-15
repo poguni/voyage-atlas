@@ -11,8 +11,10 @@ export function choOf(ch) {
 export const normalize = s => String(s).toLowerCase().replace(/[\s·・\-().,']/g, '');
 
 // text 안에서 q가 시작하는 위치(없으면 -1). q의 글자가 초성이면 text 글자의 초성과 비교합니다.
-export function matchIndex(text, q) {
-  const t = normalize(text), s = normalize(q);
+export const matchIndex = (text, q) => matchNormalized(normalize(text), normalize(q));
+
+// 이미 normalize한 글자끼리 비교(도시 3만 곳 검색처럼 많을 때 미리 정규화해 두고 사용)
+export function matchNormalized(t, s) {
   if (!s) return -1;
   outer: for (let i = 0; i <= t.length - s.length; i++) {
     for (let j = 0; j < s.length; j++) {

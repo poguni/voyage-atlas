@@ -20,3 +20,7 @@ export async function loadCountries() {
 }
 
 export const CONT = { AS: '아시아', EU: '유럽', AF: '아프리카', NA: '북아메리카', SA: '남아메리카', OC: '오세아니아', AN: '남극권' };
+
+// 대륙 색(차트·HUD 전용, DESIGN.md 3장 색 사용 규칙)
+export const CONT_COLOR = { AS: '#2EC4B6', EU: '#9B5DE5', NA: '#4C8DFF', OC: '#F15BB5', AF: '#FFB347', SA: '#7BD389' };
+export const CONT_ORDER = ['AS', 'EU', 'AF', 'NA', 'SA', 'OC'];

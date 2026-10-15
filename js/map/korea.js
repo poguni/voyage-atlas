@@ -5,7 +5,8 @@ import { createMap } from './engine.js';
 import { addStar } from './effects.js';
 import { loadJSON } from '../data.js';
 import { esc } from '../env.js';
-import { sidoId } from '../stats.js';
+import { sidoId, isSido } from '../stats.js';
+import { placeInfo } from '../places.js';
 
 export const DOKDO = [131.8669, 37.2419];   // 동도·서도 사이
 const GYEONGBUK = sidoId('47');
@@ -71,17 +72,28 @@ export async function koreaView(container, app) {
     dkCircle.attr('class', `marker dokdo-ring ${app.classFor(GYEONGBUK)}`);
     m.pins.selectAll('*').remove();
     for (const placeId of app.stars('korea')) {
-      const xy = anchor.get(placeId);
+      // 시도는 라벨 위, 시군구는 저장된 좌표
+      const info = isSido(placeId) ? null : placeInfo(placeId);
+      const xy = info ? (info.ll && m.proj(info.ll)) : anchor.get(placeId);
       if (!xy) continue;
-      const g = addStar(m.pin(m.pins, [xy[0], xy[1] - 16]), 14);
-      g.on('click', e => { e.stopPropagation(); app.onPlace(e, placeId, m.pathOf(placeId), xy); });
+      const mapId = info ? sidoId(info.sido) : placeId;
+      const g = addStar(m.pin(m.pins, info ? xy : [xy[0], xy[1] - 16]), 14);
+      if (info) m.hover(g, () => `<b>✦ ${esc(info.name)}</b><span class="dim">${esc(info.sub)}</span>`);
+      g.on('click', e => { e.stopPropagation(); app.onPlace(e, placeId, m.pathOf(mapId), xy, mapId); });
     }
   };
 
   m.target = placeId => {
+    if (!isSido(placeId)) {
+      const info = placeInfo(placeId);
+      if (!info.ll) return null;
+      const mapId = sidoId(info.sido);
+      const xy = m.proj(info.ll);
+      return { el: m.pathOf(mapId), xy, bounds: [[xy[0] - 8, xy[1] - 8], [xy[0] + 8, xy[1] + 8]], mapId };
+    }
     const el = m.pathOf(placeId);
     if (!el) return null;
-    return { el, xy: anchor.get(placeId), bounds: m.path.bounds(d3.select(el).datum()) };
+    return { el, xy: anchor.get(placeId), bounds: m.path.bounds(d3.select(el).datum()), mapId: placeId };
   };
 
   m.redraw();

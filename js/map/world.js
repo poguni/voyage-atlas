@@ -6,7 +6,8 @@ import { addStar } from './effects.js';
 import { loadJSON, loadCountries, CONT } from '../data.js';
 import { flagHTML } from '../ui/flag.js';
 import { esc } from '../env.js';
-import { countryId } from '../stats.js';
+import { countryId, isCountry } from '../stats.js';
+import { placeInfo } from '../places.js';
 
 const toFeatures = topo => feature(topo, topo.objects.countries).features;
 
@@ -72,22 +73,33 @@ export async function worldView(container, app) {
     markerSel.forEach(cl => cl.attr('class', `marker ${app.classFor(countryId(cl.datum().id))}`));
     m.pins.selectAll('*').remove();
     for (const placeId of app.stars('world')) {
-      const c = byId.get(placeId.slice(8));
-      if (!c) continue;
-      const g = addStar(m.pin(m.pins, m.proj(c.ll)), 14);
-      m.hover(g, () => tipHTML(c));
-      g.on('click', e => { e.stopPropagation(); app.onPlace(e, placeId, m.pathOf(placeId), m.proj(c.ll)); });
+      // 국가는 국가 사전 좌표, 도시는 저장된 좌표
+      const c = isCountry(placeId) ? byId.get(placeId.slice(8)) : null;
+      const info = c ? null : placeInfo(placeId);
+      const ll = c ? c.ll : info.ll;
+      if (!ll) continue;
+      const mapId = c ? placeId : countryId(info.countryId);
+      const g = addStar(m.pin(m.pins, m.proj(ll)), 14);
+      m.hover(g, () => (c ? tipHTML(c) : `<b>✦ ${esc(info.name)}</b><span class="dim">${esc(info.sub)}</span>`));
+      g.on('click', e => { e.stopPropagation(); app.onPlace(e, placeId, m.pathOf(mapId), m.proj(ll), mapId); });
     }
   };
 
-  // 검색 등으로 장소를 찾아갈 때: { el, xy(지도 좌표), bounds }
+  // 검색 등으로 장소를 찾아갈 때: { el(긁을 땅), xy(지도 좌표), bounds, mapId(땅의 장소 ID) }
   m.target = placeId => {
+    if (!isCountry(placeId)) {
+      const info = placeInfo(placeId);
+      if (!info.ll) return null;
+      const mapId = countryId(info.countryId);
+      const xy = m.proj(info.ll);
+      return { el: m.pathOf(mapId), xy, bounds: [[xy[0] - 5, xy[1] - 5], [xy[0] + 5, xy[1] + 5]], mapId };
+    }
     const c = byId.get(placeId.slice(8));
     if (!c) return null;
     const el = m.pathOf(placeId);
     const xy = m.proj(c.ll);
     const bounds = el ? mainBounds(m.path, d3.select(el).datum()) : [[xy[0] - 4, xy[1] - 4], [xy[0] + 4, xy[1] + 4]];
-    return { el, xy, bounds };
+    return { el, xy, bounds, mapId: placeId };
   };
 
   m.redraw();

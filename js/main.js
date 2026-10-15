@@ -1,4 +1,6 @@
-// 앱 진입점: 상태 불러오기, 지도 보기 전환, 장소 클릭(팝오버·빠른 색칠·금박 긁기), HUD, 검색, 패널
+// 앱 진입점: 상태 불러오기, 화면 이동(지도·연대기·위시·통계), 지도 보기 전환, 장소 클릭(팝오버·빠른 색칠·금박 긁기),
+// HUD, 검색, 패널(목록·설정·여행·장소 상세·위시)
+import { geoCentroid } from 'd3';
 import { feature } from 'topojson-client';
 import { settings, motionReduced, onSettings } from './settings.js';
 import { esc, josa } from './env.js';
@@ -6,8 +8,9 @@ import { loadJSON, loadCountries } from './data.js';
 import { loadState, getState, subscribe, setPlaceStatus, setManyStatus, toggleWish } from './store.js';
 import {
   visitCount, placeStatus, isWished, levelClass, countryStats, koreaStats, isCountry, isSido, KR_SIDO, sidoId,
+  daysSummary, tripStarted, tripYear, todayStr,
 } from './stats.js';
-import { registerPlaces, placeInfo, countryList, sidoList } from './places.js';
+import { registerPlaces, placeInfo, placeMeta, countryList, baseSearchItems, allSearchItems, loadCityItems } from './places.js';
 import { worldView } from './map/world.js';
 import { koreaView } from './map/korea.js';
 import { scratch, particles } from './map/effects.js';
@@ -15,18 +18,29 @@ import { drawSky } from './ui/sky.js';
 import { toast } from './ui/toast.js';
 import { initPopover, openPopover, closePopover, popoverTarget } from './ui/popover.js';
 import { renderWorldHud, renderKoreaHud } from './ui/hud.js';
-import { initSearch } from './ui/search.js';
-import { initPanels, openPanel } from './ui/panel.js';
+import { attachCombobox } from './ui/search.js';
+import { initPanels, openPanel, closePanel } from './ui/panel.js';
 import { initListPanel, renderListPanel } from './ui/list-panel.js';
 import { initSettingsPanel, pickRestoreFile } from './ui/settings-panel.js';
+import { initTripForm, openTripForm } from './ui/trip-form.js';
+import { initWishForm, openWishForm } from './ui/wish-form.js';
+import { initPlaceDetail, openPlaceDetail, renderPlaceDetail, placeDetailOpen } from './ui/place-detail.js';
+import { renderDream } from './ui/dream.js';
+import { initTrips, renderTrips, selectTrip } from './screens/trips.js';
+import { initWish, renderWish } from './screens/wish.js';
+import { initStats, renderStats } from './screens/stats-view.js';
 
 const $ = id => document.getElementById(id);
 const VIEWS = { world: worldView, korea: koreaView };
+const ROUTES = ['home', 'trips', 'wish', 'stats'];
+const TITLES = { home: '지도', trips: '여행 연대기', wish: '위시리스트', stats: '통계' };
 const box = $('map');
 let current = null;      // 현재 지도 객체
 let viewName = 'world';
+let route = 'home';
 let seq = 0;             // 빠르게 전환할 때 늦게 끝난 이전 그리기를 버리기 위한 번호
 let popScreen = null;    // 팝오버를 연 화면 좌표(상태가 바뀌면 같은 자리에서 다시 그림)
+let mapSize = '';        // 지도를 그린 상자 크기(화면을 오가는 사이 크기가 바뀌었으면 다시 그림)
 
 const session = {
   get: k => { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -36,7 +50,7 @@ try { const v = localStorage.getItem('va-view'); if (VIEWS[v]) viewName = v; } c
 
 // ---------- 장소 상태 → 지도·팝오버 표시 ----------
 const isSimple = placeId => getState().places[placeId]?.status === 'visited'
-  && !getState().trips.some(t => (t.stops ?? []).some(s => s.placeId === placeId));
+  && !getState().trips.some(t => tripStarted(t) && (t.stops ?? []).some(s => s.placeId === placeId));
 
 function classFor(placeId) {
   const s = getState();
@@ -60,8 +74,8 @@ function popoverView(placeId) {
   const status = placeStatus(s, placeId);
   const simple = isSimple(placeId);
   const v = { ...info, status, count: visitCount(s, placeId), simple, wished: isWished(s, placeId) };
-  if (status === 'visited' && !simple && !s.trips.length) {
-    v.desc = isCountry(placeId) ? '안에 있는 시도·도시를 방문해서 자동으로 방문 표시됐어요.' : undefined;
+  if (status === 'visited' && !simple && !s.trips.some(t => tripStarted(t) && t.stops.some(x => x.placeId === placeId)) && isCountry(placeId)) {
+    v.desc = '안에 있는 시도·도시를 방문해서 자동으로 방문 표시됐어요.';
   }
   return v;
 }
@@ -72,27 +86,32 @@ const screenOf = e => { const r = box.getBoundingClientRect(); return [e.clientX
 const app = {
   classFor,
   statusText,
-  onPlace(e, placeId, el, xy) {
-    if ($('quickPaint').checked) return quickPaint(placeId, el, xy, screenOf(e));
+  // mapId: 클릭한 땅의 장소 ID(도시 별을 누르면 그 도시가 속한 나라·시도)
+  onPlace(e, placeId, el, xy, mapId = placeId) {
+    if ($('quickPaint').checked) return quickPaint({ placeId, el, xy, mapId }, screenOf(e));
     popScreen = screenOf(e);
-    openPopover({ placeId, el, xy }, popScreen, popoverView(placeId));
+    openPopover({ placeId, el, xy, mapId }, popScreen, popoverView(placeId));
   },
   onZoomStart: () => closePopover(),
   onBackground: () => closePopover(),
+  // 지도에 별로 띄울 위시(아직 방문 전). 세계 지도는 나라·도시, 한국 지도는 시도·시군구
   stars(view) {
     const s = getState();
-    return s.wishlist.filter(w => !w.doneAt && visitCount(s, w.placeId) === 0)
-      .map(w => w.placeId).filter(id => (view === 'korea' ? isSido(id) : isCountry(id)));
+    return s.wishlist.filter(w => !w.doneAt && visitCount(s, w.placeId) === 0).map(w => w.placeId)
+      .filter(id => (view === 'korea' ? id.startsWith('kr-') : !id.startsWith('kr-')));
   },
 };
 
 // ---------- 방문 표시(금박 긁기) ----------
-function markVisited({ placeId, el, xy }, screen, { quick = false } = {}) {
-  const level = levelClass(Math.max(1, visitCount(getState(), placeId)));
-  // 긁기를 먼저 시작해 path에 표시를 붙인 뒤 상태를 바꿔야, 연출이 끝날 때까지 색이 바로 바뀌지 않습니다.
-  const done = current && el?.isConnected ? scratch(current, el, xy, level, { quick }) : Promise.resolve();
+function markVisited({ placeId, el, xy, mapId = placeId }, screen, { quick = false } = {}) {
+  const s = getState();
+  // 긁을 땅이 아직 칠해지지 않았을 때만 긁기 연출(도시를 표시했는데 나라가 이미 방문함이면 생략)
+  const landCount = visitCount(s, mapId);
+  const level = levelClass(Math.max(1, mapId === placeId ? visitCount(s, placeId) : landCount));
+  const done = current && el?.isConnected && (mapId === placeId || !landCount)
+    ? scratch(current, el, xy, level, { quick }) : Promise.resolve();
   particles(box.querySelector('.fx-canvas'), screen[0], screen[1], { n: quick ? 12 : 36 });
-  const undo = setPlaceStatus(placeId, 'visited', { quick });
+  const undo = setPlaceStatus(placeId, 'visited', { quick, meta: placeMeta(placeId) });
   done.then(() => current?.refresh());
   const name = placeInfo(placeId).name;
   toast(`✦ <b>${esc(name)}</b>${josa(name, '을', '를')} 방문함으로 표시했어요`, { label: '실행 취소', fn: undo });
@@ -105,28 +124,31 @@ function clearMark(placeId, what = '방문') {
 }
 
 // 빠른 색칠(F2-2): 클릭 한 번으로 방문함 켜기·끄기(팝오버 생략)
-function quickPaint(placeId, el, xy, screen) {
+function quickPaint(t, screen) {
   closePopover();
-  const st = placeStatus(getState(), placeId);
-  if (st !== 'visited') return markVisited({ placeId, el, xy }, screen, { quick: true });
-  if (isSimple(placeId)) return clearMark(placeId);
+  const st = placeStatus(getState(), t.placeId);
+  if (st !== 'visited') return markVisited(t, screen, { quick: true });
+  if (isSimple(t.placeId)) return clearMark(t.placeId);
   // 여행 기록이나 시도 방문으로 생긴 방문은 빠른 색칠로 지우지 않고 팝오버로 안내
   popScreen = screen;
-  openPopover({ placeId, el, xy }, screen, popoverView(placeId));
+  openPopover(t, screen, popoverView(t.placeId));
 }
+
+// 여행 저장 뒤: 지도에서 기록했으면 연대기로 바로 가 볼 수 있게
+const afterTripSaved = t => { selectTrip(t.id); if (route !== 'trips') toast('연대기에서 경로를 볼 수 있어요.', { label: '보러 가기', fn: () => goTrip(t.id) }); };
 
 initPopover({
   scratch: t => { closePopover(); markVisited(t, popScreen ?? current.toScreen(t.xy)); },
-  detail: () => toast('장소 상세 화면은 다음 단계(Phase 2)에서 열려요.'),
-  record: () => toast('여행 기록 추가는 다음 단계(Phase 2)에서 열려요.'),
+  detail: t => { closePopover(); openPlaceDetail(t.placeId); },
+  record: t => { closePopover(); openTripForm({ placeIds: [t.placeId], onSaved: afterTripSaved }); },
   wish: t => {
-    const { added, undo } = toggleWish(t.placeId);
+    const { added, undo } = toggleWish(t.placeId, placeMeta(t.placeId));
     const name = placeInfo(t.placeId).name;
     toast(added ? `☆ <b>${esc(name)}</b>${josa(name, '을', '를')} 위시리스트에 담았어요` : `<b>${esc(name)}</b>${josa(name, '을', '를')} 위시리스트에서 뺐어요`, { label: '실행 취소', fn: undo });
   },
   transit: t => {
     if (placeStatus(getState(), t.placeId) === 'transit') return clearMark(t.placeId, '경유');
-    const undo = setPlaceStatus(t.placeId, 'transit');
+    const undo = setPlaceStatus(t.placeId, 'transit', { meta: placeMeta(t.placeId) });
     const name = placeInfo(t.placeId).name;
     toast(`✈ <b>${esc(name)}</b>${josa(name, '을', '를')} 경유로 표시했어요`, { label: '실행 취소', fn: undo });
   },
@@ -136,10 +158,14 @@ initPopover({
 // ---------- HUD ----------
 const sidoName = code => placeInfo(sidoId(code)).name;
 function renderHuds(anim) {
-  const s = getState();
+  const s = getState(), today = todayStr();
   const cs = countryStats(s, countryList(), { includeTransit: settings.includeTransit });
   const ks = koreaStats(s);
-  renderWorldHud(cs, ks, anim, motionReduced());
+  const firstYear = s.trips.filter(t => tripStarted(t, today) && t.start).map(tripYear).sort()[0];
+  renderWorldHud(cs, ks, anim, motionReduced(), {
+    days: daysSummary(s, { today }).total,
+    years: firstYear ? [firstYear, +today.slice(0, 4)] : null,
+  });
   renderKoreaHud(ks, sidoName, anim, motionReduced());
 }
 
@@ -150,7 +176,7 @@ function updateEmpty() {
   $('emptyCard').hidden = !empty || !!session.get('va-empty-closed');
 }
 
-// ---------- 보기 전환 ----------
+// ---------- 지도 보기 전환 ----------
 async function show(name) {
   viewName = name;
   try { localStorage.setItem('va-view', name); } catch { /* 무시 */ }
@@ -166,6 +192,7 @@ async function show(name) {
     const m = await VIEWS[name](box, app);
     if (my !== seq) { m?.destroy(); return; }
     current = m;
+    mapSize = `${box.clientWidth}x${box.clientHeight}`;
     box.querySelectorAll('.map-skeleton, .map-error').forEach(n => n.remove());
     introOnce(m);
     renderListPanel();
@@ -177,16 +204,46 @@ async function show(name) {
 
 // 시작 연출(DESIGN.md 7.4): 이번 실행에서 처음 세계 지도를 열 때 방문국이 70ms 간격으로 빛남
 function introOnce(m) {
-  if (m.view !== 'world' || motionReduced() || session.get('va-intro')) return;
+  if (!m || m.view !== 'world' || motionReduced() || session.get('va-intro')) return;
   session.set('va-intro');
   m.sel.filter(function () { return /lv\d/.test(this.getAttribute('class')); })
     .style('opacity', 0).transition().delay((d, i) => 300 + i * 70).duration(600).style('opacity', 1)
     .on('end', function () { this.style.opacity = ''; });
 }
 
+// ---------- 화면 이동(해시 라우팅) ----------
+function renderRoute() {
+  if (route === 'trips') renderTrips();
+  else if (route === 'wish') renderWish();
+  else if (route === 'stats') renderStats();
+}
+
+async function go(name) {
+  route = ROUTES.includes(name) ? name : 'home';
+  closePopover();
+  document.querySelectorAll('.screen').forEach(sc => { sc.hidden = sc.id !== route; });
+  document.querySelectorAll('#tabbar a[data-tab]').forEach(a => {
+    if (a.dataset.tab === route) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+  document.title = `${TITLES[route]} · 나의 여정 지도`;
+  scrollTo(0, 0);
+  if (route === 'home') {
+    renderDream();
+    // 다른 화면에 있는 동안 창 크기가 바뀌었으면 지도를 다시 그림
+    if (!current || mapSize !== `${box.clientWidth}x${box.clientHeight}`) await show(viewName);
+  } else renderRoute();
+}
+
+function goTrip(id) {
+  selectTrip(id);
+  closePanel(false);
+  if (route === 'trips') renderTrips(); else location.hash = '#trips';
+}
+
 // 검색·목록에서 장소로 이동해 팝오버 열기
 async function focusPlace(placeId) {
   const info = placeInfo(placeId);
+  if (route !== 'home') { location.hash = '#home'; await go('home'); }
   if (info.view !== viewName) await show(info.view);
   if (!current) return;
   await current.ready;
@@ -194,30 +251,28 @@ async function focusPlace(placeId) {
   if (!t) return;
   await current.zoomToBounds(t.bounds, current.view === 'korea' ? 3 : 6);
   popScreen = current.toScreen(t.xy);
-  openPopover({ placeId, el: t.el, xy: t.xy }, popScreen, popoverView(placeId), { focus: true });
+  openPopover({ placeId, el: t.el, xy: t.xy, mapId: t.mapId }, popScreen, popoverView(placeId), { focus: true });
 }
 
 // ---------- 시작 ----------
 async function start() {
   const [{ list }, sidoTopo] = await Promise.all([loadCountries(), loadJSON('data/korea-sido.json'), loadState()]);
-  registerPlaces({ countries: list, sidoFeatures: feature(sidoTopo, sidoTopo.objects.sido).features });
+  const sidoFeats = feature(sidoTopo, sidoTopo.objects.sido).features;
+  registerPlaces({ countries: list, sido: sidoFeats.map(f => ({ ...f.properties, ll: geoCentroid(f) })) });
 
-  // 검색·목록 항목
-  const searchItems = [
-    ...countryList().map(c => ({
-      placeId: `country:${c.id}`, name: c.ko, sub: c.status === 'region' ? `${c.en} · 지역` : c.en, iso2: c.iso2,
-      keys: [c.ko, c.en, ...(c.alt ?? [])], region: c.status === 'region', group: c.status === 'region' ? 'region' : c.cont,
-    })),
-    ...sidoList().map(p => ({
-      placeId: p.placeId, name: p.name, sub: p.official !== p.name ? p.official : '대한민국 시도', iso2: 'KR',
-      keys: [p.name, p.short, p.official], view: 'korea',
-    })),
-  ];
+  // 목록 패널 행(국가는 이름순, 한국은 17칸 순서)
   const byName = (a, b) => a.name.localeCompare(b.name, 'ko');
-  const worldRows = searchItems.filter(i => isCountry(i.placeId)).sort(byName);
-  const koreaRows = KR_SIDO.map(code => searchItems.find(i => i.placeId === sidoId(code)));
+  const worldRows = baseSearchItems().filter(i => isCountry(i.placeId)).sort(byName);
+  const koreaRows = KR_SIDO.map(code => baseSearchItems().find(i => i.placeId === sidoId(code)));
 
-  initSearch({ getItems: () => searchItems, onSelect: it => focusPlace(it.placeId) });
+  // 위쪽 검색: 처음 누를 때 도시·시군구를 불러오고, 다 불러오면 결과를 다시 계산
+  const searchBox = attachCombobox($('searchInput'), $('searchList'), {
+    getItems: allSearchItems,
+    emptyText: '찾는 곳이 없어요. 영어 이름으로도 찾아보세요.',
+    onOpen: () => loadCityItems().then(() => searchBox.refresh()),
+    onSelect: it => focusPlace(it.placeId),
+  });
+
   initPanels();
   initListPanel({
     view: () => viewName,
@@ -233,33 +288,46 @@ async function start() {
     },
   });
   initSettingsPanel();
+  initTripForm({ onDeleted: () => { if (route === 'trips') renderTrips(); } });
+  initWishForm();
+  const openTrip = opts => openTripForm({ onSaved: afterTripSaved, ...opts });
+  initPlaceDetail({ classFor, openTripForm: openTrip, openWishForm, goTrip });
+  initTrips({ classFor, openTripForm: openTrip, openPlace: openPlaceDetail });
+  initWish({ classFor, openWishForm, openTripForm: openTrip, openPlace: openPlaceDetail });
+  initStats({ openPlace: openPlaceDetail, goTrip });
 
   $('listBtn').addEventListener('click', () => { openPanel('listPanel'); renderListPanel(); });
   $('settingsBtn').addEventListener('click', () => openPanel('settingsPanel'));
 
   // 빈 상태 카드
-  $('emptyPaint').addEventListener('click', () => { $('quickPaint').checked = true; session.set('va-empty-closed'); updateEmpty(); toast('빠른 색칠을 켰어요. 다녀온 나라를 차례로 눌러 보세요.'); });
+  $('emptyPaint').addEventListener('click', () => { $('quickPaint').checked = true; document.body.classList.add('quick-paint'); session.set('va-empty-closed'); updateEmpty(); toast('빠른 색칠을 켰어요. 다녀온 나라를 차례로 눌러 보세요.'); });
   $('emptyImport').addEventListener('click', () => pickRestoreFile('overwrite'));
   $('emptyClose').addEventListener('click', () => { session.set('va-empty-closed'); updateEmpty(); });
 
   subscribe((s, meta) => {
     current?.redraw();
     renderHuds(true);
+    renderDream();
     renderListPanel();
     updateEmpty();
     // 팝오버가 열린 채로 상태가 바뀌면(위시·경유) 같은 자리에서 내용만 새로 그림
     const t = popoverTarget();
     if (t && popScreen) openPopover(t, popScreen, popoverView(t.placeId));
     if (meta.reason === 'restore' || meta.reason === 'reset') current?.reset();
+    if (route !== 'home') renderRoute();
+    // 메모를 쓰는 중에는 다시 그리지 않음(커서가 사라지지 않도록)
+    if (placeDetailOpen() && meta.reason !== 'note') renderPlaceDetail();
   });
   onSettings(() => {
     renderHuds(false);
     current?.land.attr('filter', motionReduced() ? null : 'url(#grain)');
+    if (route !== 'home') renderRoute();
   });
 
   renderHuds(false);
   updateEmpty();
-  await show(viewName);
+  addEventListener('hashchange', () => go(location.hash.slice(1)));
+  await go(location.hash.slice(1));
 }
 
 $('viewSeg').addEventListener('click', e => {
@@ -272,7 +340,7 @@ $('zReset').onclick = () => current?.reset();
 $('quickPaint').addEventListener('change', e => { closePopover(); document.body.classList.toggle('quick-paint', e.target.checked); });
 
 // 아직 만들지 않은 화면(준비 중) 탭은 이동하지 않습니다.
-document.querySelectorAll('.tabbar a[aria-disabled="true"]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); toast('이 화면은 다음 단계에서 열려요.'); }));
+document.querySelectorAll('#tabbar a[aria-disabled="true"]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); toast(`${a.textContent.trim()} 화면은 다음 단계에서 열려요.`); }));
 
 let rz, lastW = innerWidth, lastH = innerHeight;
 addEventListener('resize', () => {
@@ -280,7 +348,10 @@ addEventListener('resize', () => {
   rz = setTimeout(() => {
     drawSky();
     // 휴대폰 주소창이 접힐 때처럼 높이만 조금 바뀌면 다시 그리지 않습니다(팝오버가 닫히지 않게).
-    if (innerWidth !== lastW || Math.abs(innerHeight - lastH) > 120 || !current) { lastW = innerWidth; lastH = innerHeight; show(viewName); }
+    const changed = innerWidth !== lastW || Math.abs(innerHeight - lastH) > 120;
+    lastW = innerWidth; lastH = innerHeight;
+    if (!changed) return;
+    if (route === 'home') show(viewName); else renderRoute();
   }, 200);
 });
 

@@ -52,10 +52,11 @@ function putPlace(placeId, entry, meta) {
 }
 
 // 장소 상태 바꾸기: status = 'visited' | 'transit' | null(표시 지우기)
-export function setPlaceStatus(placeId, status, { quick = false } = {}) {
+// meta: 도시·시군구의 이름·좌표(처음 표시할 때 함께 저장)
+export function setPlaceStatus(placeId, status, { quick = false, meta = null } = {}) {
   const prev = state.places[placeId];
   let next = null;
-  if (status) next = { ...prev, status, quickMarked: quick, updatedAt: now() };
+  if (status) next = { ...meta, ...prev, status, quickMarked: quick, updatedAt: now() };
   else if (prev) {
     // 상태만 지우고 메모 등 다른 정보는 남깁니다.
     const { status: _s, quickMarked: _q, updatedAt: _u, ...rest } = prev;
@@ -77,15 +78,90 @@ export function setManyStatus(placeIds, status) {
   return () => commit({ ...state, places: prev }, { reason: 'place', undo: true });
 }
 
-// 위시리스트 담기·빼기. 자세한 항목(목표 시기 등)은 Phase 2 위시 화면에서 채웁니다.
-export function toggleWish(placeId) {
-  const prev = state.wishlist;
-  const has = prev.some(w => w.placeId === placeId && !w.doneAt);
+// 위시리스트 빠르게 담기·빼기(팝오버). 목표 시기 등은 위시 화면에서 채웁니다. meta: 도시 이름·좌표
+export function toggleWish(placeId, meta = null) {
+  const prev = state;
+  const has = state.wishlist.some(w => w.placeId === placeId && !w.doneAt);
+  const order = Math.max(-1, ...state.wishlist.map(x => x.order ?? -1)) + 1;
   const wishlist = has
-    ? prev.filter(w => w.placeId !== placeId)
-    : [...prev, { id: `w_${Date.now().toString(36)}`, placeId, priority: 'someday', source: 'manual', createdAt: now(), updatedAt: now() }];
-  commit({ ...state, wishlist }, { reason: 'wish', placeId });
-  return { added: !has, undo: () => commit({ ...state, wishlist: prev }, { reason: 'wish', placeId, undo: true }) };
+    ? state.wishlist.filter(w => w.placeId !== placeId || w.doneAt)
+    : [...state.wishlist, { id: newId('w'), placeId, priority: 'someday', source: 'manual', order, createdAt: now(), updatedAt: now() }];
+  commit({ ...state, places: withMetas(state.places, meta ? { [placeId]: meta } : {}), wishlist }, { reason: 'wish', placeId });
+  return { added: !has, undo: () => commit(prev, { reason: 'wish', placeId, undo: true }) };
+}
+
+// ---------- 여행(Trip) ----------
+export const newId = prefix => `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+// 도시·시군구 정보(이름·좌표)를 places에 넣어 둡니다. 이미 있는 값은 그대로 둡니다.
+function withMetas(places, metas = {}) {
+  const out = { ...places };
+  for (const [id, meta] of Object.entries(metas)) if (meta) out[id] = { ...meta, ...out[id] };
+  return out;
+}
+
+// 여행 저장(새 여행이면 추가, 있으면 바꿈). metas: { placeId: 도시 정보 }
+export function saveTrip(trip, metas) {
+  const prev = state;
+  const t = { ...trip, id: trip.id ?? newId('t'), updatedAt: now(), createdAt: trip.createdAt ?? now() };
+  const exists = state.trips.some(x => x.id === t.id);
+  const trips = exists ? state.trips.map(x => (x.id === t.id ? t : x)) : [...state.trips, t];
+  commit({ ...state, places: withMetas(state.places, metas), trips }, { reason: 'trip', tripId: t.id });
+  return { trip: t, undo: () => commit(prev, { reason: 'trip', undo: true }) };
+}
+
+export function deleteTrip(id) {
+  const prev = state;
+  commit({ ...state, trips: state.trips.filter(t => t.id !== id) }, { reason: 'trip', tripId: id });
+  return () => commit(prev, { reason: 'trip', undo: true });
+}
+
+// ---------- 위시리스트 ----------
+export function saveWish(item, metas) {
+  const prev = state;
+  const w = { ...item, id: item.id ?? newId('w'), updatedAt: now(), createdAt: item.createdAt ?? now() };
+  if (w.order === undefined) w.order = Math.max(-1, ...state.wishlist.map(x => x.order ?? -1)) + 1;
+  const exists = state.wishlist.some(x => x.id === w.id);
+  const wishlist = exists ? state.wishlist.map(x => (x.id === w.id ? w : x)) : [...state.wishlist, w];
+  commit({ ...state, places: withMetas(state.places, metas), wishlist }, { reason: 'wish', placeId: w.placeId });
+  return { wish: w, undo: () => commit(prev, { reason: 'wish', undo: true }) };
+}
+
+export function deleteWish(id) {
+  const prev = state;
+  commit({ ...state, wishlist: state.wishlist.filter(w => w.id !== id) }, { reason: 'wish' });
+  return () => commit(prev, { reason: 'wish', undo: true });
+}
+
+// "꿈 → 현실"(F6-5): 위시를 달성으로 바꾸고, 아직 방문 표시가 없으면 방문함으로 표시
+export function completeWish(id, { markVisited = true, today } = {}) {
+  const prev = state;
+  const w = state.wishlist.find(x => x.id === id);
+  if (!w) return () => {};
+  const wishlist = state.wishlist.map(x => (x.id === id ? { ...x, doneAt: today, updatedAt: now() } : x));
+  let places = state.places;
+  if (markVisited && places[w.placeId]?.status !== 'visited') {
+    places = { ...places, [w.placeId]: { ...places[w.placeId], status: 'visited', quickMarked: false, updatedAt: now() } };
+  }
+  commit({ ...state, wishlist, places }, { reason: 'wish', placeId: w.placeId, completed: id });
+  return () => commit(prev, { reason: 'wish', undo: true });
+}
+
+export function reorderWishes(ids) {
+  const order = new Map(ids.map((id, i) => [id, i]));
+  commit({ ...state, wishlist: state.wishlist.map(w => (order.has(w.id) ? { ...w, order: order.get(w.id) } : w)) }, { reason: 'wish' });
+}
+
+// 장소 메모(장소 상세 패널)
+export function setPlaceNote(placeId, note, meta) {
+  const prev = state.places[placeId];
+  const next = { ...meta, ...prev, note, updatedAt: now() };
+  if (!note && next && Object.keys(next).every(k => ['note', 'updatedAt'].includes(k))) {
+    const places = { ...state.places };
+    delete places[placeId];
+    return commit({ ...state, places }, { reason: 'note', placeId });
+  }
+  commit({ ...state, places: { ...state.places, [placeId]: next } }, { reason: 'note', placeId });
 }
 
 // 백업 복원: mode = 'overwrite' | 'merge'

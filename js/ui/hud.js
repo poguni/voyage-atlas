@@ -1,20 +1,20 @@
 // 통계 HUD(DESIGN.md 6.3, 8장 01·02): 방문국 n/195, 진행 링, 다음 목표, 대륙 막대, 보조 지표 / 한국 정복률
-import { CONT } from '../data.js';
+import { CONT, CONT_COLOR, CONT_ORDER } from '../data.js';
 import { esc, countTo } from '../env.js';
 import { nextGoal } from '../stats.js';
 
 const $ = id => document.getElementById(id);
 const RING = 2 * Math.PI * 27;   // 진행 링 둘레(r=27)
-// 대륙 색(차트 전용, DESIGN.md 3장)
-const CONT_COLOR = { AS: '#2EC4B6', EU: '#9B5DE5', NA: '#4C8DFF', OC: '#F15BB5', AF: '#FFB347', SA: '#7BD389' };
-const CONT_ORDER = ['AS', 'EU', 'AF', 'NA', 'SA', 'OC'];
 
 /**
  * @param s      countryStats 결과
  * @param k      koreaStats 결과
  * @param anim   숫자 카운트업 여부
+ * @param days   여행 일수 합계, years: [첫 여행 연도, 올해]
  */
-export function renderWorldHud(s, k, anim, reduced) {
+export function renderWorldHud(s, k, anim, reduced, { days = 0, years = null } = {}) {
+  $('hudEyebrow').textContent = years ? `My Voyage · ${years[0]} — ${years[1]}` : 'My Voyage';
+  countTo($('hudDays'), days, undefined, !anim || reduced);
   const pctFmt = v => v.toFixed(1) + '%';
   countTo($('hudCount'), s.visited, undefined, !anim || reduced);
   countTo($('hudPct'), s.pct, pctFmt, !anim || reduced);
