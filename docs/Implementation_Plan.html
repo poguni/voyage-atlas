@@ -141,7 +141,7 @@ td:first-child{white-space:nowrap}
 </thead>
 <tbody><tr>
 <td>문서 버전</td>
-<td>v1.2</td>
+<td>v1.3</td>
 </tr>
 <tr>
 <td>작성일</td>
@@ -293,7 +293,7 @@ td:first-child{white-space:nowrap}
 <td>다녀온 나라·시도를 모두 색칠하고 새로고침해도 유지</td>
 </tr>
 <tr>
-<td><strong>2</strong></td>
+<td><strong>2</strong> ✅</td>
 <td>기록·통계·위시</td>
 <td>M2</td>
 <td>도시 데이터, 여행 연대기, 장소 상세, 통계 대시보드, 위시리스트</td>
@@ -700,7 +700,32 @@ td:first-child{white-space:nowrap}
 <li>도시 데이터 검증: 서울·부산·제주·도쿄·교토·포르투·트빌리시 등 한국어 검색 결과 확인, 한국 시군구 중심 도시 누락 0.</li>
 <li>Playwright: 시나리오 B(교토·오사카 여행 추가 → 일본 방문 횟수 증가 → 통계 반영)를 그대로 따라 함.</li>
 </ul>
-<h3>추천 커밋</h3>
+<h3>진행 결과 (2026-10-15 완료)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>테스트</td>
+<td>45개 통과(데이터 19, 통계·백업 13, 여행 통계 10, 한글 검색 3)</td>
+</tr>
+<tr>
+<td>도시 데이터</td>
+<td>GeoNames 인구 1만 5천 이상 31,618곳 + 한국어 이름이 있는 작은 관광 도시 1,584곳 = 33,202곳(한국어 이름 7,562곳), 한국 시군구 230곳(구가 있는 시는 하나로). 수작업 보강표 50곳(<code>tools/city-ko-overrides.csv</code>). 1.8MB(전송 시 약 731KB), 검색을 처음 쓸 때 불러옴</td>
+</tr>
+<tr>
+<td>브라우저 확인</td>
+<td>시나리오 B(교토·오사카 여행 → 경로 지도 ICN→교토→오사카→ICN, 일본 방문 2회), 겹치는 출장 날짜 합집합(27일 = 해외 23 + 국내 4, 손으로 계산한 값과 같음), 장소 상세(방문 기록·다녀온 도시), 위시 추가 → &quot;다녀왔어요&quot; → 조지아 색칠, 홈의 가장 가까운 꿈 D-98, 도시 검색(인터라켄) → 확대 + 팝오버, 1440·390px</td>
+</tr>
+<tr>
+<td>계획과 달라진 점</td>
+<td>① 통계 4번째 KPI는 이동 거리 대신 <strong>여행 횟수</strong>(이동 거리는 Phase 5) ② 휴대폰 지도 화면의 <strong>3단계 하단 시트는 미적용</strong>(Phase 1의 세로 배치 유지, 패널만 하단 시트로 열림) → Phase 5에서 검토 ③ 위시 <strong>자유 장소</strong>는 &quot;지도에 보일 이름&quot;을 바꾸고 위치는 가까운 도시·나라로 정하는 방식(지도에서 위치 찍기는 미적용) ④ <strong>미래 날짜 여행</strong>은 &quot;다가오는 여정&quot;으로 따로 보이고 방문 횟수·일수에 넣지 않음(F3-6 일부 앞당김) ⑤ 할슈타트처럼 인구 1천 미만 마을은 GeoNames 목록에 없어 빠짐 ⑥ 지도 위 도시 핀은 Phase 5(지금은 위시 도시만 별로 표시)</td>
+</tr>
+</tbody></table>
+</div><h3>추천 커밋</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
