@@ -28,6 +28,7 @@ npm test
 
 - `tests/stats.test.js`: 방문 횟수(단순 표시 흡수), 대한민국 자동 방문, 경유 포함 여부, 국가·대륙·한국 통계, 백업 왕복·합치기·마이그레이션
 - `tests/trips.test.js`: 여행 일수 합집합(겹친 날), 국내·해외, 연말을 넘는 여행, 예정 여행 제외, 많이 간 나라, 기록으로 본 나, D-day
+- `tests/share.test.js`: 공유 포스터 숫자(월드·한국), 날짜 범위, 4가지 크기 배치 겹침, 저장 해상도
 - `tests/hangul.test.js`: 초성 검색
 
 `tests/data.test.js`는 지도·국가·국기 데이터를 검사합니다.
@@ -73,7 +74,8 @@ VoyageAtlas/
 │  ├─ env.js           글자 이스케이프, 조사, 숫자 카운트업
 │  ├─ data.js          data/*.json 불러오기, 국가 사전
 │  ├─ map/             engine.js(지도 엔진), world.js(세계), korea.js(대한민국), effects.js(금박 긁기·파티클·별), mini.js(경로·장소·별 지도)
-│  ├─ screens/         trips.js(연대기), wish.js(위시리스트), stats-view.js(통계)
+│  ├─ screens/         trips.js(연대기), wish.js(위시리스트), stats-view.js(통계), share.js(공유 스튜디오)
+│  ├─ share/           model.js(포스터 숫자·배치), poster.js(Canvas 그리기)
 │  └─ ui/              popover, hud, search, toast, panel, list-panel, settings-panel, trip-form, wish-form, place-detail, dream, flag(국기 이미지), tooltip, sky
 ├─ data/               지도·국가 데이터(전처리 결과)
 ├─ assets/flags/       국기 SVG
