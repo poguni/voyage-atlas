@@ -243,6 +243,43 @@
   </div>
 </section>
 
+<!-- ===================== 공유 스튜디오(시안 08) ===================== -->
+<section class="screen" id="share" aria-labelledby="shareTitle" hidden>
+  <div class="page page-studio">
+    <div class="page-head">
+      <div><div class="eyebrow">Share Studio</div><h1 class="h-display" id="shareTitle">자랑하고 싶은 여정을<br>포스터로</h1></div>
+      <span class="spacer"></span>
+      <button class="btn" type="button" id="shShare">↗ 바로 공유</button>
+      <button class="btn btn-primary" type="button" id="shSave">⤓ PNG 저장</button>
+    </div>
+    <div class="studio">
+      <div class="card tpl" role="group" aria-label="템플릿" id="shTpl">
+        <span class="opt-title">템플릿</span>
+        <button type="button" aria-pressed="true" data-tpl="world"><span class="thumb"></span><span><b>월드 스크래치 포스터</b><br><small class="dim">방문국 · 대륙 진행률</small></span></button>
+        <button type="button" aria-pressed="false" data-tpl="korea"><span class="thumb thumb-korea"></span><span><b>대한민국 정복 지도</b><br><small class="dim">시도 정복률 · 독도 포함</small></span></button>
+        <button type="button" disabled><span class="thumb thumb-year"></span><span><b>올해의 여정</b> <span class="tag">준비 중</span><br><small class="dim">연말 결산</small></span></button>
+        <button type="button" disabled><span class="thumb"></span><span><b>여행 카드</b> <span class="tag">준비 중</span><br><small class="dim">여행 1개의 경로 지도</small></span></button>
+        <button type="button" disabled><span class="thumb"></span><span><b>위시 보드</b> <span class="tag">준비 중</span><br><small class="dim">꿈꾸는 곳 별 지도</small></span></button>
+      </div>
+      <div class="poster-stage"><canvas id="shCanvas" role="img" aria-label="공유 포스터 미리 보기"></canvas></div>
+      <div class="card opts">
+        <div class="opt-group"><span>크기</span><div class="opt-row" id="shSize">
+          <button type="button" aria-pressed="true" data-v="1080x1350">세로 4:5</button><button type="button" aria-pressed="false" data-v="1080x1920">스토리 9:16</button><button type="button" aria-pressed="false" data-v="1080x1080">정사각</button><button type="button" aria-pressed="false" data-v="1920x1080">가로 16:9</button></div></div>
+        <div class="opt-group"><span>테마</span><div class="opt-row" id="shTheme">
+          <button type="button" aria-pressed="true" data-v="night">밤하늘 금박</button><button type="button" aria-pressed="false" data-v="vintage">빈티지 지도</button><button type="button" aria-pressed="false" data-v="minimal">미니멀 화이트</button></div></div>
+        <div class="opt-group"><span>표시</span>
+          <label class="switch"><input type="checkbox" id="shNums" checked> 숫자 표시</label>
+          <label class="switch"><input type="checkbox" id="shDates"> 날짜 표시</label>
+          <label class="switch"><input type="checkbox" id="shMark" checked> 워터마크</label>
+        </div>
+        <div class="opt-group"><label for="shTitleIn">제목</label><input class="input" id="shTitleIn" maxlength="24" autocomplete="off"></div>
+        <div class="opt-group"><label for="shName">이름</label><input class="input" id="shName" maxlength="20" autocomplete="off" placeholder="왼쪽 아래에 들어가요(선택)"></div>
+        <p class="faint small" id="shInfo"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- 목록으로 색칠 패널 -->
 <aside class="panel glass" id="listPanel" role="dialog" aria-labelledby="listTitle" hidden>
   <header class="panel-head">
@@ -400,7 +437,7 @@
   <a href="#wish" data-tab="wish"><svg viewBox="-12 -12 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M0-10C1-3 3-1 10 0 3 1 1 3 0 10-1 3-3 1-10 0-3-1-1-3 0-10Z"/></svg>위시</a>
   <a href="#ai" data-tab="ai" aria-disabled="true" title="준비 중(Phase 4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/><circle cx="12" cy="12" r="3"/></svg>AI 추천</a>
   <a href="#stats" data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>통계</a>
-  <a href="#share" data-tab="share" aria-disabled="true" title="준비 중(Phase 3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v5h14v-5"/></svg>공유</a>
+  <a href="#share" data-tab="share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v5h14v-5"/></svg>공유</a>
 </nav>
 
 <div class="toast-wrap" id="toasts" aria-live="polite"></div>
