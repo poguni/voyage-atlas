@@ -103,6 +103,10 @@
         <button type="button" data-view="korea" aria-pressed="false">대한민국</button>
         <button type="button" data-view="globe" aria-pressed="false">지구본</button>
       </div>
+      <div class="seg" role="group" aria-label="한국 지도 단위" id="unitSeg" hidden>
+        <button type="button" data-unit="sido" aria-pressed="true">시도</button>
+        <button type="button" data-unit="sigungu" aria-pressed="false">시군구</button>
+      </div>
       <label class="switch spin-toggle" id="spinWrap" hidden><input type="checkbox" id="spinToggle" checked> 자전</label>
       <div class="search" role="search">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -175,19 +179,9 @@
       <button class="btn btn-ghost btn-sm" type="button" id="emptyClose">지도 먼저 둘러볼게요</button>
     </div>
 
-    <div class="overlay glass legend" aria-label="범례" id="legendWorld">
-      <span><i class="sw" style="background:linear-gradient(135deg,var(--foil-3),var(--foil-2))"></i>미방문(금박)</span>
-      <span><i class="sw" style="background:var(--v1)"></i>1회</span>
-      <span><i class="sw" style="background:var(--v2)"></i>2회</span>
-      <span><i class="sw" style="background:var(--v3)"></i>3회</span>
-      <span><i class="sw" style="background:var(--v4)"></i>4회 이상</span>
-      <span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--transit) 0 3px,var(--foil-2) 3px 6px)"></i>경유</span>
-      <span><svg width="14" height="14" viewBox="-12 -12 24 24" style="vertical-align:-3px;margin-right:6px;fill:var(--wish)" aria-hidden="true"><use href="#sparkle" x="-12" y="-12" width="24" height="24"/></svg>위시</span>
+    <div class="overlay glass legend" aria-label="범례" id="legendWorld"><!-- js/ui/legend.js -->
     </div>
-    <div class="overlay glass legend" aria-label="범례" id="legendKorea" hidden>
-      <span><i class="sw" style="background:linear-gradient(135deg,var(--foil-3),var(--foil-2))"></i>미방문</span>
-      <span><i class="sw" style="background:var(--v1)"></i>1회</span><span><i class="sw" style="background:var(--v2)"></i>2회</span><span><i class="sw" style="background:var(--v3)"></i>3회</span><span><i class="sw" style="background:var(--v4)"></i>4회 이상</span>
-      <span class="faint">시도를 두 번 누르면 시군구로 확대(P1)</span>
+    <div class="overlay glass legend" aria-label="범례" id="legendKorea" hidden><!-- js/ui/legend.js -->
     </div>
 
     <div class="overlay zoom-ctl">

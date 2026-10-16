@@ -15,6 +15,14 @@ export function registerPlaces({ countries, sido }) {
   sido.forEach(p => reg.sido.set(`kr-sido:${p.code}`, p));   // { code, name, official, short, ll }
 }
 
+// 시군구 지도(F1-9)를 열 때 경계 파일의 이름·중심을 등록합니다(도시 파일을 받기 전에도 팝오버·색칠이 되도록).
+export function registerSigungu(rows) {
+  for (const { code, name, sido, ll } of rows) {
+    const placeId = `kr-sigungu:${code}`;
+    if (!cityIndex.has(placeId)) cityIndex.set(placeId, { name_ko: name, countryId: KOREA, sido, lat: +ll[1].toFixed(3), lon: +ll[0].toFixed(3) });
+  }
+}
+
 export const countryList = () => [...reg.countries.values()];
 export const sidoList = () => [...reg.sido.entries()].map(([placeId, p]) => ({ placeId, ...p }));
 export const countryOfId = id => reg.countries.get(`country:${id}`);

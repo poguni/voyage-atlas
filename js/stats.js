@@ -70,7 +70,18 @@ export function visitCount(state, placeId, today = todayStr()) {
     const inside = Object.entries(places).some(([id, p]) => id !== placeId && p.status === 'visited' && countryOf(id, places) === c);
     if (inside) return 1;
   }
+  // 시군구를 방문했으면 그 시도도 방문(F2-8)
+  if (isSido(placeId)) {
+    const code = placeId.slice(8);
+    if (Object.entries(places).some(([id, p]) => id !== placeId && p.status === 'visited' && sidoOf(id, places) === code)) return 1;
+  }
   return 0;
+}
+
+// 시군구 장소 코드: 일반 시 안의 구('수원시장안구' 41111)는 시 하나('수원시' 41110)로 합칩니다(tools/build-cities.mjs와 같은 규칙).
+export function sigunguKey(code, name) {
+  const m = /^(.+시)(.+구)$/.exec(name);
+  return m ? { code: `${code.slice(0, 4)}0`, name: m[1] } : { code, name };
 }
 
 export const isWished = (state, placeId) => (state.wishlist ?? []).some(w => w.placeId === placeId && !w.doneAt);
@@ -220,6 +231,45 @@ export function placeVisits(state, placeId, today = todayStr()) {
     .sort((a, b) => (b.start ?? '').localeCompare(a.start ?? ''));
   const dated = trips.filter(t => t.start).map(t => t.start).sort();
   return { trips, first: dated[0] ?? null, last: dated.at(-1) ?? null };
+}
+
+// ---------- 지도 확장(F1-10·F1-11) ----------
+// 방문한 도시·시군구(지도 핀): [{ placeId, count }]. kind: 'city' | 'kr-sigungu'
+export function visitedCities(state, kind, today = todayStr()) {
+  const ids = new Set();
+  for (const t of state.trips ?? []) if (tripStarted(t, today)) for (const s of t.stops ?? []) if (s.placeId.startsWith(`${kind}:`)) ids.add(s.placeId);
+  for (const [id, p] of Object.entries(state.places ?? {})) if (p.status === 'visited' && id.startsWith(`${kind}:`)) ids.add(id);
+  return [...ids].map(placeId => ({ placeId, count: visitCount(state, placeId, today) })).filter(c => c.count > 0);
+}
+
+const placeTrips = (state, placeId, today) =>
+  (state.trips ?? []).filter(t => tripStarted(t, today) && tripIncludes(t, placeId, state.places ?? {}));
+
+// 마지막 방문 연도(날짜 있는 여행 기준). 날짜 없는 방문 표시뿐이면 null
+export function lastVisitYear(state, placeId, today = todayStr()) {
+  const ys = placeTrips(state, placeId, today).filter(t => t.start).map(tripYear);
+  return ys.length ? Math.max(...ys) : null;
+}
+
+// 가장 많이 함께한 동행 유형(같으면 최근 여행의 동행). 기록이 없으면 null
+export function mainCompanion(state, placeId, today = todayStr()) {
+  const trips = placeTrips(state, placeId, today).filter(t => t.companion).sort((a, b) => (b.start ?? '').localeCompare(a.start ?? ''));
+  const n = {};
+  for (const t of trips) n[t.companion] = (n[t.companion] ?? 0) + 1;
+  return trips.map(t => t.companion).sort((a, b) => n[b] - n[a])[0] ?? null;   // 안정 정렬이라 같은 수면 최근 것
+}
+
+// 연도 색 구간(최대 5칸, 오래된 것부터): 해가 5개 이하면 해마다 한 칸, 넘으면 기간을 5등분
+export function yearBuckets(years) {
+  const ys = [...new Set(years)].sort((a, b) => a - b);
+  if (ys.length <= 5) return ys.map(y => ({ from: y, to: y }));
+  const min = ys[0], span = ys.at(-1) - min + 1;
+  const out = [];
+  for (let i = 0; i < 5; i++) {
+    const from = min + Math.ceil(span * i / 5), to = min + Math.ceil(span * (i + 1) / 5) - 1;
+    if (to >= from) out.push({ from, to });
+  }
+  return out;
 }
 
 // ---------- 전체 연대기 재생(F3-5) ----------

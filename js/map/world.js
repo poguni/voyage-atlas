@@ -3,6 +3,7 @@ import * as d3 from 'd3';
 import { feature } from 'topojson-client';
 import { createMap } from './engine.js';
 import { addStar } from './effects.js';
+import { drawCityPins, toggleCityLabels } from './pins.js';
 import { loadJSON, loadCountries, CONT } from '../data.js';
 import { flagHTML } from '../ui/flag.js';
 import { esc } from '../env.js';
@@ -29,7 +30,7 @@ export const countryTipHTML = (c, statusText) => `<b>${flagHTML(c.iso2, c.ko, 16
   + `<span style="color:var(--gold-strong)">${esc(statusText(countryId(c.id)))}</span>`;
 
 /**
- * @param app { classFor(placeId), statusText(placeId), onPlace(e, placeId, el, xy), onZoomStart(), onBackground(), stars(view) }
+ * @param app { classFor(placeId), statusText(placeId), onPlace(e, placeId, el, xy), onZoomStart(), onBackground(), stars(view), cities(kind) }
  */
 export async function worldView(container, app) {
   const [{ list, byId }, topo110] = await Promise.all([loadCountries(), loadJSON('data/countries-110m.json')]);
@@ -47,6 +48,7 @@ export async function worldView(container, app) {
     classOf: f => app.classFor(pid(f)),
     tip: f => tipHTML(byId.get(f.id)),
     onClick: (e, f, el) => app.onPlace(e, pid(f), el, d3.pointer(e, m.root.node())),
+    onZoom: toggleCityLabels,
     onZoomStart: app.onZoomStart,
     onBackground: app.onBackground,
   });
@@ -75,6 +77,7 @@ export async function worldView(container, app) {
     m.refresh();
     markerSel.forEach(cl => cl.attr('class', `marker ${app.classFor(countryId(cl.datum().id))}`));
     m.pins.selectAll('*').remove();
+    drawCityPins(m, app.cities('city'), app, { mapOf: info => countryId(info.countryId) });
     for (const placeId of app.stars('world')) {
       // 국가는 국가 사전 좌표, 도시는 저장된 좌표
       const c = isCountry(placeId) ? byId.get(placeId.slice(8)) : null;

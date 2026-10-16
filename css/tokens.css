@@ -21,6 +21,9 @@
   /* 방문 단계(오로라) */
   --v1:#2EC4B6; --v2:#4C8DFF; --v3:#9B5DE5; --v4:#F15BB5;
   --wish:#FFD166; --transit:#7A86B8;
+  /* 색칠 기준 전환(F1-11): 마지막 방문 연도(오래된 → 최근), 동행 유형 */
+  --y0:#46507E; --y1:#5571B4; --y2:#3E98CC; --y3:#2EC4B6; --y4:#8EF0C6; --y-none:#6B6F86;
+  --cp-solo:#4C8DFF; --cp-family:#FFB347; --cp-friends:#7BD389; --cp-partner:#F15BB5; --cp-business:#9B5DE5; --cp-none:#6B6F86;
 
   /* 글자 */
   --text:#F5F1E8; --text-dim:#B3BAD8; --text-faint:#8089B0;
@@ -48,6 +51,8 @@
   --foil-1:#D6C39A; --foil-2:#C3AC7E; --foil-3:#E4D6B4; --foil-edge:rgba(110,80,30,.35);
   --v1:#0F8F84; --v2:#2F67D8; --v3:#7A3FC4; --v4:#C9348F;
   --wish:#C98A00; --transit:#9A8F7A;
+  --y0:#AEB6D6; --y1:#7D94C9; --y2:#3E7FB8; --y3:#0F8F84; --y4:#0B6447; --y-none:#B7B1A3;
+  --cp-solo:#2F67D8; --cp-family:#C77A12; --cp-friends:#3E9A57; --cp-partner:#C9348F; --cp-business:#7A3FC4; --cp-none:#B7B1A3;
   --text:#2B2418; --text-dim:#5E5240; --text-faint:#7A6C55;
   --graticule:rgba(90,70,40,.10); --sphere:rgba(90,70,40,.03);
   --claude:#D9562E; --gpt:#12936A; --gemini:#2A78C9;

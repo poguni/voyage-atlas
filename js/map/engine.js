@@ -93,9 +93,9 @@ export function createMap(container, o) {
   m.reset = () => run(s => s.call(zoom.transform, d3.zoomIdentity), 700);
 
   // 지도 좌표 영역 [[x0,y0],[x1,y1]]이 화면에 알맞게 보이도록 확대
-  m.zoomToBounds = ([[x0, y0], [x1, y1]], maxK = 6) => {
-    // 팝오버가 장소를 가리지 않도록 화면의 35% 정도만 채웁니다.
-    const k = Math.max(1, Math.min(maxK, 0.35 / Math.max((x1 - x0) / w, (y1 - y0) / h)));
+  m.zoomToBounds = ([[x0, y0], [x1, y1]], maxK = 6, fill = 0.35) => {
+    // 팝오버가 장소를 가리지 않도록 화면의 35% 정도만 채웁니다(fill).
+    const k = Math.max(1, Math.min(maxK, fill / Math.max((x1 - x0) / w, (y1 - y0) / h)));
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-cx, -cy);
     return run(s => s.call(zoom.transform, t), 750);

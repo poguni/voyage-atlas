@@ -8,7 +8,7 @@ import { loadJSON, loadCountries } from './data.js';
 import { loadState, getState, subscribe, setPlaceStatus, setManyStatus, toggleWish, recordAchievements } from './store.js';
 import {
   visitCount, placeStatus, isWished, levelClass, countryStats, koreaStats, isCountry, isSido, KR_SIDO, sidoId,
-  daysSummary, tripStarted, tripYear, todayStr,
+  daysSummary, tripStarted, tripYear, todayStr, visitedCities, lastVisitYear, mainCompanion, yearBuckets,
 } from './stats.js';
 import { registerPlaces, placeInfo, placeMeta, countryList, baseSearchItems, allSearchItems, loadCityItems } from './places.js';
 import { worldView } from './map/world.js';
@@ -34,6 +34,7 @@ import { initStats, renderStats } from './screens/stats-view.js';
 import { initShare, renderShare } from './screens/share.js';
 import { initMilestone, celebrate } from './ui/milestone.js';
 import { initTimelapse, startTimelapse, stopTimelapse, frameState } from './ui/timelapse.js';
+import { renderLegend, yearClass, COLOR_MODES } from './ui/legend.js';
 import { newlyEarned, nextGoals, headline, metrics } from './badges.js';
 import { initAi, renderAi } from './screens/ai.js';
 import { initAiSettings, refreshPrices } from './ui/ai-settings.js';
@@ -49,12 +50,18 @@ let route = 'home';
 let seq = 0;             // 빠르게 전환할 때 늦게 끝난 이전 그리기를 버리기 위한 번호
 let popScreen = null;    // 팝오버를 연 화면 좌표(상태가 바뀌면 같은 자리에서 다시 그림)
 let mapSize = '';        // 지도를 그린 상자 크기(화면을 오가는 사이 크기가 바뀌었으면 다시 그림)
+let colorBy = 'count';   // 지도 색칠 기준(F1-11)
+let krUnit = 'sido';     // 한국 지도 단위(F1-9)
 
 const session = {
   get: k => { try { return sessionStorage.getItem(k); } catch { return null; } },
   set: k => { try { sessionStorage.setItem(k, '1'); } catch { /* 무시 */ } },
 };
-try { const v = localStorage.getItem('va-view'); if (VIEWS[v]) viewName = v; } catch { /* 무시 */ }
+try {
+  const v = localStorage.getItem('va-view'); if (VIEWS[v]) viewName = v;
+  const c = localStorage.getItem('va-colorby'); if (COLOR_MODES[c]) colorBy = c;
+  if (localStorage.getItem('va-kr-unit') === 'sigungu') krUnit = 'sigungu';
+} catch { /* 무시 */ }
 
 // ---------- 장소 상태 → 지도·팝오버 표시 ----------
 const isSimple = placeId => getState().places[placeId]?.status === 'visited'
@@ -66,6 +73,22 @@ function classFor(placeId) {
   if (n) return levelClass(n);
   const wish = isWished(s, placeId) ? ' wishc' : '';
   return (s.places[placeId]?.status === 'transit' ? 'transit' : 'unv') + wish;
+}
+
+// 지도 홈의 색: 색칠 기준에 따라(작은 지도들은 늘 방문 횟수 기준)
+let bucketCache = { s: null, buckets: [] };
+function yearBucketsNow() {
+  const s = getState();
+  if (bucketCache.s !== s) bucketCache = { s, buckets: yearBuckets(s.trips.filter(t => t.start && tripStarted(t)).map(tripYear)) };
+  return bucketCache.buckets;
+}
+function mapClassFor(placeId) {
+  const cls = classFor(placeId);
+  if (colorBy === 'count' || !/^lv\d/.test(cls)) return cls;
+  const s = frameState() ?? getState();
+  if (colorBy === 'status') return 'vis lv1';
+  if (colorBy === 'year') { const y = lastVisitYear(s, placeId); return `vis ${y == null ? 'y-none' : yearClass(yearBucketsNow(), y)}`; }
+  return `vis cp-${mainCompanion(s, placeId) ?? 'none'}`;
 }
 
 function statusText(placeId) {
@@ -82,8 +105,8 @@ function popoverView(placeId) {
   const status = placeStatus(s, placeId);
   const simple = isSimple(placeId);
   const v = { ...info, status, count: visitCount(s, placeId), simple, wished: isWished(s, placeId) };
-  if (status === 'visited' && !simple && !s.trips.some(t => tripStarted(t) && t.stops.some(x => x.placeId === placeId)) && isCountry(placeId)) {
-    v.desc = '안에 있는 시도·도시를 방문해서 자동으로 방문 표시됐어요.';
+  if (status === 'visited' && !simple && !s.trips.some(t => tripStarted(t) && t.stops.some(x => x.placeId === placeId)) && (isCountry(placeId) || isSido(placeId))) {
+    v.desc = isSido(placeId) ? '안에 있는 시군구를 방문해서 자동으로 방문 표시됐어요.' : '안에 있는 시도·도시를 방문해서 자동으로 방문 표시됐어요.';
   }
   return v;
 }
@@ -92,8 +115,12 @@ const screenOf = e => { const r = box.getBoundingClientRect(); return [e.clientX
 
 // ---------- 지도에 넘기는 연결 함수 ----------
 const app = {
-  classFor,
+  classFor: mapClassFor,
   statusText,
+  // 지도 핀(F1-10): 다녀온 도시·시군구
+  cities: kind => visitedCities(frameState() ?? getState(), kind),
+  krUnit: () => krUnit,
+  onDrill: placeId => drill(placeId),
   // mapId: 클릭한 땅의 장소 ID(도시 별을 누르면 그 도시가 속한 나라·시도)
   onPlace(e, placeId, el, xy, mapId = placeId) {
     if ($('quickPaint').checked) return quickPaint({ placeId, el, xy, mapId }, screenOf(e));
@@ -208,6 +235,35 @@ function updateEmpty() {
   $('emptyCard').hidden = !empty || !!session.get('va-empty-closed');
 }
 
+// ---------- 범례·색칠 기준(F1-11)·한국 지도 단위(F1-9) ----------
+function renderLegends() {
+  const buckets = colorBy === 'year' ? yearBucketsNow() : [];
+  renderLegend($('legendWorld'), { view: 'world', mode: colorBy, buckets });
+  renderLegend($('legendKorea'), { view: 'korea', mode: colorBy, buckets, unit: krUnit });
+}
+
+function setColorBy(mode) {
+  colorBy = mode;
+  try { localStorage.setItem('va-colorby', mode); } catch { /* 무시 */ }
+  renderLegends();
+  current?.redraw();
+}
+
+function setUnit(unit) {
+  krUnit = unit;
+  try { localStorage.setItem('va-kr-unit', unit); } catch { /* 무시 */ }
+  renderLegends();
+}
+
+// 시도를 두 번 누르면 시군구 지도로 바꾸고 그 시도로 확대
+async function drill(placeId) {
+  closePopover();
+  setUnit('sigungu');
+  await show('korea');
+  const t = current?.target(placeId);
+  if (t) await current.zoomToBounds(t.bounds, 8, 0.8);
+}
+
 // ---------- 지도 보기 전환 ----------
 // 전환 연출(F1-8): 세계 ↔ 지구본은 평면이 둥글게 접히고, 한국으로 갈 때는 대한민국으로 날아가 시도 지도로 겹쳐 바뀝니다.
 const fade = (node, from, to, ms) => new Promise(res => {
@@ -245,6 +301,8 @@ async function show(name) {
   const hudView = name === 'korea' ? 'korea' : 'world';   // 지구본은 세계 HUD·범례
   for (const [id, v] of [['legendWorld', 'world'], ['legendKorea', 'korea'], ['hudWorld', 'world'], ['hudKorea', 'korea']]) $(id).hidden = hudView !== v;
   $('spinWrap').hidden = name !== 'globe';
+  $('unitSeg').hidden = name !== 'korea';
+  document.querySelectorAll('#unitSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === krUnit)));
 
   const my = ++seq;
   // 같은 크기의 지도에서 보기만 바꿀 때만 연출(창 크기가 바뀌어 다시 그릴 때는 생략)
@@ -275,7 +333,7 @@ async function show(name) {
 function introOnce(m) {
   if (!m || m.view !== 'world' || motionReduced() || session.get('va-intro')) return;
   session.set('va-intro');
-  m.sel.filter(function () { return /lv\d/.test(this.getAttribute('class')); })
+  m.sel.filter(function () { return /lv\d|vis/.test(this.getAttribute('class')); })
     .style('opacity', 0).transition().delay((d, i) => 300 + i * 70).duration(600).style('opacity', 1)
     .on('end', function () { this.style.opacity = ''; });
 }
@@ -386,6 +444,7 @@ async function start() {
 
   subscribe((s, meta) => {
     current?.redraw();
+    if (colorBy === 'year') renderLegends();
     renderHuds(true);
     renderDream();
     renderListPanel();
@@ -406,6 +465,7 @@ async function start() {
     if (route !== 'home') renderRoute();
   });
 
+  renderLegends();
   checkBadges();          // 이미 달성해 있던 배지는 조용히 기록
   badgesReady = true;
   renderHuds(false);
@@ -418,6 +478,11 @@ $('viewSeg').addEventListener('click', e => {
   const b = e.target.closest('button[data-view]');
   if (b && !b.disabled && VIEWS[b.dataset.view] && b.dataset.view !== viewName) show(b.dataset.view);
 });
+$('unitSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-unit]');
+  if (b && b.dataset.unit !== krUnit) { setUnit(b.dataset.unit); show('korea'); }
+});
+for (const id of ['legendWorld', 'legendKorea']) $(id).addEventListener('change', e => { if (e.target.matches('[data-colorby]')) setColorBy(e.target.value); });
 $('zIn').onclick = () => current?.zoomBy(1.6);
 $('zOut').onclick = () => current?.zoomBy(1 / 1.6);
 $('zReset').onclick = () => current?.reset();
