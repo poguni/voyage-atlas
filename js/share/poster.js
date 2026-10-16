@@ -45,15 +45,15 @@ function pill(ctx, x, y, w, h) {
 
 /**
  * @param canvas  그릴 캔버스(크기는 여기서 W·H × scale로 맞춤)
- * @param model   worldModel / koreaModel 결과
+ * @param model   worldModel / koreaModel / yearModel / tripModel 결과
  * @param geo     { features, markers(작은 나라: { id, ll }) }
- * @param o       { W, H, scale, theme, nums, dates, mark, title, eyebrow, name }
+ * @param o       { W, H, scale, px([가로, 세로] 저장 크기, 없으면 W·H × scale), theme, nums, dates, mark, title, eyebrow, name }
  */
 export function drawPoster(canvas, model, geo, o) {
   const { W, H, scale = 1 } = o, T = POSTER_THEMES[o.theme];
   const L = posterLayout(W, H, { nums: o.nums });
   const { s, M } = L;
-  canvas.width = Math.round(W * scale); canvas.height = Math.round(H * scale);
+  [canvas.width, canvas.height] = o.px ?? [Math.round(W * scale), Math.round(H * scale)];
   const ctx = canvas.getContext('2d');
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   ctx.textBaseline = 'alphabetic';
@@ -90,6 +90,8 @@ export function drawPoster(canvas, model, geo, o) {
     text(ctx, model.bigLabel, L.tx, big.labelY, { font: `600 ${30 * s}px ${S}`, color: T.dim, align: L.align });
     if (model.rows) drawBars(ctx, model.rows, rows, s, T);
     if (model.chips) drawChips(ctx, model.chips, rows, s, T);
+    if (model.facts) drawFacts(ctx, model.facts, rows, s, T);
+    if (model.lines) drawLines(ctx, model.lines, L, T);
     text(ctx, model.summary, L.tx, L.summaryY, { font: `600 ${26 * s}px ${S}`, color: T.text, align: L.align });
   }
   if (o.name) text(ctx, o.name, M, L.markY, { font: `600 ${20 * s}px ${S}`, color: T.dim, alpha: 0.9 });
@@ -100,9 +102,17 @@ function drawMap(ctx, model, geo, L, T) {
   const { s } = L;
   const korea = model.kind === 'korea';
   const fit = { type: 'FeatureCollection', features: korea ? [...geo.features, { type: 'Feature', geometry: { type: 'Point', coordinates: DOKDO } }] : geo.features };
-  const proj = (korea ? d3.geoMercator() : d3.geoNaturalEarth1()).fitExtent(L.mapBox, fit);
+  const zoomed = !korea && model.route?.length;   // 여행 카드(해외): 경로 둘레만 확대해서 보여 줌
+  const proj = zoomed ? routeProjection(model.route, L.mapBox) : (korea ? d3.geoMercator() : d3.geoNaturalEarth1()).fitExtent(L.mapBox, fit);
   const path = d3.geoPath(proj, ctx);
   const [[x0, y0], [x1, y1]] = L.mapBox;
+  if (zoomed) {
+    // 확대한 지도는 액자(둥근 상자) 안에만
+    ctx.save();
+    roundRect(ctx, x0, y0, x1 - x0, y1 - y0, 24 * s);
+    ctx.fillStyle = T.bg1; ctx.globalAlpha = 0.35; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.clip();
+  }
   const land = ctx.createLinearGradient(x0, y0, x1, y1);
   land.addColorStop(0, T.land0); land.addColorStop(1, T.land1);
   const lvOf = f => model.levels.get(korea ? f.properties.code : f.id) ?? 0;
@@ -135,6 +145,22 @@ function drawMap(ctx, model, geo, L, T) {
     ctx.fillStyle = T.text; ctx.fillText('독도', x, y - 14 * s);
   }
 
+  // 올해 다녀온 도시(금빛 점)
+  for (const ll of model.dots ?? []) {
+    const p = proj(ll);
+    if (!p) continue;
+    ctx.beginPath(); ctx.arc(p[0], p[1], 5 * s, 0, Math.PI * 2);
+    ctx.fillStyle = T.text; ctx.fill();
+    ctx.lineWidth = 2.5 * s; ctx.strokeStyle = T.accent; ctx.stroke();
+  }
+
+  if (model.route) drawRoute(ctx, { ...model, box: L.mapBox }, proj, path, s, T);
+  if (zoomed) {
+    ctx.restore();
+    roundRect(ctx, x0, y0, x1 - x0, y1 - y0, 24 * s);
+    ctx.strokeStyle = T.accent; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.5 * s; ctx.stroke(); ctx.globalAlpha = 1;
+  }
+
   // 위시 별(후광 + 4각 반짝임)
   for (const w of model.stars) {
     const p = proj(w.ll);
@@ -146,6 +172,97 @@ function drawMap(ctx, model, geo, L, T) {
     ctx.fillStyle = T.wish; ctx.fill(STAR);
     ctx.restore();
   }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+// 여행 카드 투영: 경로의 가운데 경도로 돌려(날짜변경선을 넘어도 이어지게) 상자에 맞추되, 너무 가까운 경로는 최소 40° 폭으로
+function routeProjection(route, box) {
+  const line = { type: 'LineString', coordinates: route };
+  const [lon, lat] = d3.geoCentroid(line);
+  const [[x0, y0], [x1, y1]] = box, pad = Math.min(x1 - x0, y1 - y0) * 0.14;
+  const proj = d3.geoNaturalEarth1().rotate([-lon, 0]).fitExtent([[x0 + pad, y0 + pad], [x1 - pad, y1 - pad]], line);
+  const maxScale = (x1 - x0) / (40 * Math.PI / 180);
+  if (proj.scale() > maxScale) {
+    proj.scale(maxScale);
+    const [px, py] = proj([lon, lat]), [tx, ty] = proj.translate();
+    proj.translate([tx + (x0 + x1) / 2 - px, ty + (y0 + y1) / 2 - py]);
+  }
+  return proj;
+}
+
+// 경로: 흐린 그림자 + 금빛 대권 선 → 홈 공항(청록 점) → 경유지(번호 + 이름)
+function drawRoute(ctx, model, proj, path, s, T) {
+  if (model.route.length > 1) {
+    const line = { type: 'LineString', coordinates: model.route };
+    ctx.lineCap = 'round';
+    ctx.beginPath(); path(line); ctx.strokeStyle = T.accent; ctx.globalAlpha = 0.25; ctx.lineWidth = 12 * s; ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); path(line); ctx.lineWidth = 3.5 * s; ctx.stroke();
+  }
+  // 지도 오른쪽 절반의 점은 이름을 왼쪽에 써서 액자 밖으로 잘리지 않게
+  const [[bx0], [bx1]] = model.box;
+  // 이름이 앞서 쓴 이름과 겹치면 점만 남김(경로는 아래 줄에 모두 적힘)
+  const drawn = [];
+  const label = (str, x, y, color) => {
+    const left = x > (bx0 + bx1) / 2;
+    ctx.font = `700 ${24 * s}px ${S}`; ctx.textAlign = left ? 'right' : 'left';
+    const tx = left ? x - 14 * s : x + 14 * s, w = ctx.measureText(str).width;
+    const r = [left ? tx - w : tx, y - 22 * s, left ? tx : tx + w, y + 6 * s];
+    if (drawn.some(d => r[0] < d[2] && d[0] < r[2] && r[1] < d[3] && d[1] < r[3])) return;
+    drawn.push(r);
+    ctx.lineWidth = 6 * s; ctx.strokeStyle = T.bg1; ctx.lineJoin = 'round'; ctx.strokeText(str, tx, y);
+    ctx.fillStyle = color; ctx.fillText(str, tx, y);
+  };
+  if (model.home) {
+    const [x, y] = proj(model.home.ll);
+    ctx.beginPath(); ctx.arc(x, y, 9 * s, 0, Math.PI * 2); ctx.fillStyle = T.lv[0]; ctx.fill();
+    ctx.lineWidth = 3 * s; ctx.strokeStyle = T.bg1; ctx.stroke();
+    label(model.home.label, x, y + 8 * s, T.text);
+  }
+  model.stops.forEach((st, i) => {
+    const [x, y] = proj(st.ll);
+    ctx.beginPath(); ctx.arc(x, y, 8 * s, 0, Math.PI * 2); ctx.fillStyle = T.lv[3]; ctx.fill();
+    ctx.lineWidth = 3 * s; ctx.strokeStyle = T.bg1; ctx.stroke();
+    label(st.label, x, y + (i % 2 ? 26 : -10) * s, T.text);   // 겹치지 않게 위·아래 번갈아
+  });
+}
+
+// 너무 길면 줄이고, 그래도 넘치면 말줄임
+function fitText(ctx, str, weight, size, family, maxW) {
+  fitFont(ctx, str, weight, size, family, maxW);
+  if (ctx.measureText(str).width <= maxW) return str;
+  let t = str;
+  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxW) t = t.slice(0, -1);
+  return `${t}…`;
+}
+
+// 올해의 여정: 이름 · 값 줄(대륙 막대 자리)
+function drawFacts(ctx, facts, R, s, T) {
+  const gap = 60 * s, cols = Math.min(R.cols, 2), colW = (R.w - gap * (cols - 1)) / cols;
+  facts.forEach((f, i) => {
+    const x = R.x + (i % cols) * (colW + gap), y = R.y + Math.floor(i / cols) * R.rowH;
+    text(ctx, f.label, x, y, { font: `400 ${22 * s}px ${S}`, color: T.dim });
+    ctx.font = `400 ${22 * s}px ${S}`;
+    const lw = ctx.measureText(f.label).width + 20 * s;
+    const v = fitText(ctx, f.value, 600, 24 * s, S, colW - lw);
+    text(ctx, v, x + colW, y, { font: ctx.font, color: T.text, align: 'right' });
+    ctx.fillStyle = T.track; ctx.fillRect(x, y + 14 * s, colW, 1.5 * s);
+  });
+}
+
+// 여행 카드: 경로 한 줄 + 메모 한 줄
+function drawLines(ctx, lines, L, T) {
+  const { s, rows } = L, maxW = rows.w;
+  lines.forEach((str, i) => {
+    const size = i ? 26 * s : 30 * s;
+    const t = fitText(ctx, str, i ? 400 : 700, size, i ? F : S, maxW);
+    text(ctx, t, L.tx, rows.y + i * 58 * s, { font: ctx.font, color: i ? T.dim : T.text, align: L.align });
+  });
 }
 
 // 대륙 진행 막대: 이름 · 방문/전체 · 막대

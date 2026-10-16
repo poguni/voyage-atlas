@@ -1,12 +1,18 @@
 // 공유 포스터의 내용(숫자·문구)과 배치 계산(DOM·Canvas 없이 Node 테스트 가능, PRD F8, DESIGN.md 8장 08)
 import {
   countryStats, koreaStats, visitCount, countryId, sidoId, KR_SIDO, daysSummary, tripStarted, isDomestic, todayStr,
+  tripYear, tripDays, tripIncludes, countryOf, sidoOf, distanceSummary, tripDistanceKm, COMPANIONS, KOREA,
 } from '../stats.js';
 import { CONT, CONT_ORDER } from '../data.js';
+import { fmtRange, fmtStars } from '../format.js';
 
-export const SIZES = [['1080x1350', '세로 4:5'], ['1080x1920', '스토리 9:16'], ['1080x1080', '정사각'], ['1920x1080', '가로 16:9']];
+export const SIZES = [['1080x1350', '세로 4:5'], ['1080x1920', '스토리 9:16'], ['1080x1080', '정사각'], ['1920x1080', '가로 16:9'], ['a3', '인쇄 A3']];
 export const EXPORT_SCALE = 2;   // 저장 이미지는 2배 해상도(F8-10)
-export const parseSize = size => size.split('x').map(Number);
+// 인쇄용 A3(F8-7): 297×420mm를 300dpi로 저장(3508×4961px). 배치는 같은 비율의 1240×1754로 계산합니다.
+export const A3 = { layout: [1240, 1754], px: [3508, 4961] };
+export const parseSize = size => (size === 'a3' ? [...A3.layout] : size.split('x').map(Number));
+// 저장 이미지 크기 [가로, 세로](px). A3는 배치 비율과 0.1% 안쪽으로 달라 세로를 자릅니다(1px 미만).
+export const exportSize = size => (size === 'a3' ? [...A3.px] : parseSize(size).map(v => v * EXPORT_SCALE));
 
 // 포스터 테마(DESIGN.md 8장 08 표)
 export const POSTER_THEMES = {
@@ -18,6 +24,8 @@ export const POSTER_THEMES = {
 export const TEMPLATES = {
   world: { title: '나의 여정 지도', eyebrow: 'VOYAGE ATLAS' },
   korea: { title: '대한민국 정복 지도', eyebrow: 'KOREA CONQUEST' },
+  year: { title: '올해의 여정', eyebrow: 'YEAR IN TRAVEL' },
+  trip: { title: '여행 카드', eyebrow: 'TRAVEL CARD' },
 };
 
 const level = n => Math.min(4, n);
@@ -112,4 +120,109 @@ export function posterLayout(W, H, { nums = true } = {}) {
     L.rows = { x: M, y: by + (square ? 100 : 120) * s, w: W - M * 2, cols: square ? 3 : 2, chipCols: square ? 9 : 6, rowH: 54 * s };
   }
   return L;
+}
+
+// ---------- 템플릿 ③ 올해의 여정(F8-4) ----------
+const fmtLaps = v => (v >= 10 ? Math.round(v).toLocaleString('ko-KR') : v.toFixed(1));
+const fmtKm = km => (Math.round(km / 100) * 100).toLocaleString('ko-KR');
+
+// 그해 이전에 이미 다녀온 나라: 그 전에 떠난 여행 + 날짜 없이 '방문함'으로만 표시한 곳(여행보다 먼저 다녀온 것으로 봄)
+function countriesBefore(state, year, today) {
+  const places = state.places ?? {}, set = new Set();
+  const started = (state.trips ?? []).filter(t => tripStarted(t, today));
+  for (const t of started) if (t.start && tripYear(t) < year) for (const s of t.stops ?? []) { const c = countryOf(s.placeId, places); if (c) set.add(c); }
+  for (const [id, p] of Object.entries(places)) {
+    if (p.status !== 'visited' || started.some(t => tripIncludes(t, id, places))) continue;
+    const c = countryOf(id, places);
+    if (c) set.add(c);
+  }
+  return set;
+}
+
+/**
+ * @param infoOf placeId → { name, ll } | null  (도시 이름·좌표)
+ * @param home   홈 공항 { code, ll }
+ */
+export function yearModel(state, countries, { year, today = todayStr(), home, infoOf }) {
+  const places = state.places ?? {};
+  const byId = new Map(countries.map(c => [c.id, c]));
+  const trips = (state.trips ?? []).filter(t => tripStarted(t, today) && tripYear(t) === year);
+  const counts = new Map(), dots = new Map();
+  for (const t of trips) {
+    const seen = new Set();
+    for (const s of t.stops ?? []) {
+      const c = countryOf(s.placeId, places);
+      if (c) seen.add(c);
+      if (!s.placeId.startsWith('country:') && !s.placeId.startsWith('kr-sido:')) { const ll = infoOf(s.placeId)?.ll; if (ll) dots.set(s.placeId, ll); }
+    }
+    for (const c of seen) counts.set(c, (counts.get(c) ?? 0) + 1);
+  }
+  const before = countriesBefore(state, year, today);
+  // 대한민국(사는 나라)은 새로 간 나라로 치지 않습니다.
+  const fresh = [...counts.keys()].filter(c => c !== KOREA && !before.has(c) && byId.get(c)?.status !== 'region');
+  const days = daysSummary(state, { today, year }).total;
+  const dist = distanceSummary(state, { home: home.ll, llOf: id => infoOf(id)?.ll ?? null, today, year });
+  let longest = null;
+  for (const t of trips) { const d = tripDays(t); if (d && (!longest || d > longest.days)) longest = { title: t.title || fmtRange(t), days: d }; }
+  const end = String(year) === today.slice(0, 4) ? `${+today.slice(5, 7)}. ${+today.slice(8, 10)}` : '12. 31';
+  const names = fresh.map(c => byId.get(c)?.ko).filter(Boolean);
+  return {
+    kind: 'world',
+    title: `${year} 올해의 여정`,
+    levels: new Map([...counts].map(([c, n]) => [c, level(n)])),
+    stars: [],
+    dots: [...dots.values()],
+    big: String(counts.size),
+    bigLabel: `나라 · 새로 간 곳 ${fresh.length}`,
+    facts: [
+      { label: '여행', value: `${trips.length}회` },
+      { label: '여행 일수', value: `${days}일` },
+      { label: '가장 긴 여행', value: longest ? `${longest.title} · ${longest.days}일` : '—' },
+      { label: '새로 간 나라', value: names.length ? names.join(', ') : '—' },
+      { label: '이동 거리', value: dist.km ? `${fmtKm(dist.km)}km · 지구 ${fmtLaps(dist.laps)}바퀴` : '—' },
+    ],
+    summary: [`여행 ${trips.length}회`, days && `${days}일`, fresh.length && `새로운 나라 ${fresh.length}곳`].filter(Boolean).join(' · '),
+    dates: `${year}. 1. 1 — ${end}`,
+  };
+}
+
+// ---------- 템플릿 ④ 여행 카드(F8-5) ----------
+// 고를 수 있는 여행: 경유지가 있는 여행(최근 것부터)
+export const cardTrips = state => (state.trips ?? []).filter(t => (t.stops ?? []).length)
+  .sort((a, b) => (b.start ?? '').localeCompare(a.start ?? ''));
+
+export function tripModel(state, countries, { trip, home, infoOf }) {
+  const places = state.places ?? {};
+  const domestic = isDomestic(trip, places);
+  const stops = (trip.stops ?? []).map(s => ({ placeId: s.placeId, ...(infoOf(s.placeId) ?? { name: s.placeId, ll: null }) }));
+  const pts = stops.filter(s => s.ll).map(s => s.ll);
+  // 국내 여행은 경유지끼리만, 해외 여행은 홈 공항에서 출발해 돌아옴(연대기 경로 지도와 같음)
+  const route = domestic ? pts : pts.length ? [home.ll, ...pts, home.ll] : [];
+  const levels = new Map();
+  for (const s of stops) {
+    const key = domestic ? sidoOf(s.placeId, places) : countryOf(s.placeId, places);
+    if (key) levels.set(key, 1);
+  }
+  if (!domestic && levels.size === 0) levels.set(KOREA, 1);
+  const days = tripDays(trip);
+  // 국내 여행은 공항을 그리지 않으므로 공항 왕복 거리도 적지 않습니다.
+  const km = domestic ? 0 : tripDistanceKm(trip, home.ll, id => infoOf(id)?.ll ?? null);
+  const names = stops.map(s => s.name);
+  return {
+    kind: domestic ? 'korea' : 'world',
+    title: trip.title || '여행 카드',
+    levels,
+    stars: [],
+    route,
+    stops: stops.filter(s => s.ll).map((s, i) => ({ ll: s.ll, label: `${i + 1} ${s.name}` })),
+    home: domestic ? null : { ll: home.ll, label: home.code },
+    big: String(days ?? stops.length),
+    bigLabel: days ? `일 · ${stops.length}곳` : '곳',
+    lines: [
+      domestic ? names.join(' → ') : [home.code, ...names, home.code].join(' → '),
+      trip.note ? `“${trip.note.split('\n')[0]}”` : '',   // 메모는 첫 줄만
+    ].filter(Boolean),
+    summary: [COMPANIONS[trip.companion], fmtStars(trip.rating), km && `${fmtKm(km)}km`].filter(Boolean).join(' · ') || fmtRange(trip),
+    dates: trip.start ? fmtRange(trip) : null,
+  };
 }

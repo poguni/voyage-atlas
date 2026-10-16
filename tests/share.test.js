@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { worldModel, koreaModel, posterLayout, dateRange, parseSize, SIZES, EXPORT_SCALE } from '../js/share/model.js';
+import { worldModel, koreaModel, yearModel, tripModel, cardTrips, posterLayout, dateRange, parseSize, exportSize, SIZES, EXPORT_SCALE } from '../js/share/model.js';
 import { emptyState } from '../js/backup.js';
 
 const countries = JSON.parse(readFileSync('data/countries.ko.json', 'utf8'));
@@ -89,4 +89,58 @@ test('배치: 4가지 크기 모두 지도·글이 포스터 안에 있고 겹�
 test('저장 크기는 2배 해상도', () => {
   assert.equal(EXPORT_SCALE, 2);
   assert.deepEqual(parseSize('1080x1350').map(v => v * EXPORT_SCALE), [2160, 2700]);
+});
+
+// ---------- Phase 5f: 올해의 여정, 여행 카드, A3 ----------
+const HOME = { code: 'ICN', ll: [126.45, 37.46] };
+const LL = { 'city:1857910': ['교토', [135.75, 35.02]], 'country:392': ['일본', [138, 36]], 'kr-sido:50': ['제주', [126.5, 33.4]], 'country:250': ['프랑스', [2, 46]] };
+const infoOf = id => (LL[id] ? { name: LL[id][0], ll: LL[id][1] } : null);
+
+test('올해의 여정: 그해 나라·새로 간 나라·가장 긴 여행·이동 거리', () => {
+  const m = yearModel(state, countries, { year: 2025, today: TODAY, home: HOME, infoOf });
+  assert.equal(m.title, '2025 올해의 여정');
+  assert.equal(m.big, '1');                                   // 일본
+  assert.equal(m.bigLabel, '나라 · 새로 간 곳 0');             // 2016년에 이미 다녀옴
+  assert.equal(m.dates, '2025. 1. 1 — 12. 31');
+  assert.equal(m.facts.find(f => f.label === '가장 긴 여행').value, '2025. 10. 3 — 10. 8 · 6일');
+  assert.match(m.facts.find(f => f.label === '이동 거리').value, /km · 지구 0\.\d바퀴/);
+  const y16 = yearModel(state, countries, { year: 2016, today: TODAY, home: HOME, infoOf });
+  assert.equal(y16.bigLabel, '나라 · 새로 간 곳 1');
+  assert.equal(y16.facts.find(f => f.label === '새로 간 나라').value, '일본');
+  assert.equal(y16.dots.length, 1);                           // 교토 점
+  const now = yearModel(state, countries, { year: 2026, today: TODAY, home: HOME, infoOf });
+  assert.equal(now.dates, '2026. 1. 1 — 10. 15');             // 올해는 오늘까지
+});
+
+test('올해의 여정: 날짜 없이 방문함으로만 표시한 나라는 새로 간 나라가 아님', () => {
+  const s = S({ places: { 'country:250': { status: 'visited' } }, trips: [trip('fr', '2024-05-01', '2024-05-03', ['country:250'])] });
+  // 여행에 들어간 나라의 표시는 여행에 흡수되므로 새로 간 나라로 셈
+  assert.equal(yearModel(s, countries, { year: 2024, today: TODAY, home: HOME, infoOf }).bigLabel, '나라 · 새로 간 곳 1');
+  const s2 = S({ places: { 'country:250': { status: 'visited' }, 'city:1': { countryId: '250', status: 'visited' } }, trips: [trip('jp', '2024-05-01', '2024-05-03', ['country:392'])] });
+  assert.equal(yearModel(s2, countries, { year: 2024, today: TODAY, home: HOME, infoOf }).bigLabel, '나라 · 새로 간 곳 1');
+});
+
+test('여행 카드: 해외는 홈 공항 왕복 경로, 국내는 한국 지도', () => {
+  const jp = tripModel(state, countries, { trip: { ...state.trips[0], title: '교토의 여름', companion: 'family', rating: 4, note: '골목길\n둘째 줄' }, home: HOME, infoOf });
+  assert.equal(jp.kind, 'world');
+  assert.deepEqual(jp.route, [HOME.ll, [135.75, 35.02], HOME.ll]);
+  assert.deepEqual(jp.lines, ['ICN → 교토 → ICN', '“골목길”']);
+  assert.equal(jp.big, '5');
+  assert.equal(jp.bigLabel, '일 · 1곳');
+  assert.match(jp.summary, /^가족 · ★★★★☆ · [\d,]+km$/);
+  assert.equal(jp.dates, '2016. 8. 1 — 8. 5');
+  assert.ok(jp.levels.has('392'));
+  const jeju = tripModel(state, countries, { trip: state.trips[2], home: HOME, infoOf });
+  assert.equal(jeju.kind, 'korea');
+  assert.deepEqual([...jeju.levels.keys()], ['50']);
+  assert.equal(jeju.home, null);
+  assert.deepEqual(jeju.lines, ['제주']);
+  assert.deepEqual(cardTrips(state).map(t => t.id), ['future', 'jeju', 'jp2', 'jp1']);
+});
+
+test('인쇄용 A3: 300dpi(3508×4961), 배치는 같은 비율', () => {
+  const [W, H] = parseSize('a3');
+  assert.deepEqual(exportSize('a3'), [3508, 4961]);
+  assert.ok(Math.abs(H / W - 4961 / 3508) < 0.001);
+  assert.deepEqual(exportSize('1080x1350'), [2160, 2700]);
 });

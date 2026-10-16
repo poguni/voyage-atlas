@@ -310,14 +310,15 @@
         <span class="opt-title">템플릿</span>
         <button type="button" aria-pressed="true" data-tpl="world"><span class="thumb"></span><span><b>월드 스크래치 포스터</b><br><small class="dim">방문국 · 대륙 진행률</small></span></button>
         <button type="button" aria-pressed="false" data-tpl="korea"><span class="thumb thumb-korea"></span><span><b>대한민국 정복 지도</b><br><small class="dim">시도 정복률 · 독도 포함</small></span></button>
-        <button type="button" disabled><span class="thumb thumb-year"></span><span><b>올해의 여정</b> <span class="tag">준비 중</span><br><small class="dim">연말 결산</small></span></button>
-        <button type="button" disabled><span class="thumb"></span><span><b>여행 카드</b> <span class="tag">준비 중</span><br><small class="dim">여행 1개의 경로 지도</small></span></button>
+        <button type="button" aria-pressed="false" data-tpl="year"><span class="thumb thumb-year"></span><span><b>올해의 여정</b><br><small class="dim">연말 결산 · 새로 간 나라</small></span></button>
+        <button type="button" aria-pressed="false" data-tpl="trip"><span class="thumb thumb-trip"></span><span><b>여행 카드</b><br><small class="dim">여행 1개의 경로 지도</small></span></button>
         <button type="button" disabled><span class="thumb"></span><span><b>위시 보드</b> <span class="tag">준비 중</span><br><small class="dim">꿈꾸는 곳 별 지도</small></span></button>
       </div>
       <div class="poster-stage"><canvas id="shCanvas" role="img" aria-label="공유 포스터 미리 보기"></canvas></div>
       <div class="card opts">
+        <div class="opt-group" id="shPickWrap" hidden><label for="shPick" id="shPickLabel">연도</label><select class="input" id="shPick"></select></div>
         <div class="opt-group"><span>크기</span><div class="opt-row" id="shSize">
-          <button type="button" aria-pressed="true" data-v="1080x1350">세로 4:5</button><button type="button" aria-pressed="false" data-v="1080x1920">스토리 9:16</button><button type="button" aria-pressed="false" data-v="1080x1080">정사각</button><button type="button" aria-pressed="false" data-v="1920x1080">가로 16:9</button></div></div>
+          <button type="button" aria-pressed="true" data-v="1080x1350">세로 4:5</button><button type="button" aria-pressed="false" data-v="1080x1920">스토리 9:16</button><button type="button" aria-pressed="false" data-v="1080x1080">정사각</button><button type="button" aria-pressed="false" data-v="1920x1080">가로 16:9</button><button type="button" aria-pressed="false" data-v="a3">인쇄 A3</button></div></div>
         <div class="opt-group"><span>테마</span><div class="opt-row" id="shTheme">
           <button type="button" aria-pressed="true" data-v="night">밤하늘 금박</button><button type="button" aria-pressed="false" data-v="vintage">빈티지 지도</button><button type="button" aria-pressed="false" data-v="minimal">미니멀 화이트</button></div></div>
         <div class="opt-group"><span>표시</span>
