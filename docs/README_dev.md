@@ -76,7 +76,7 @@ VoyageAtlas/
 │  ├─ hangul.js        초성 검색
 │  ├─ env.js           글자 이스케이프, 조사, 숫자 카운트업
 │  ├─ data.js          data/*.json 불러오기, 국가 사전
-│  ├─ map/             engine.js(지도 엔진), world.js(세계), korea.js(대한민국), effects.js(금박 긁기·파티클·별), mini.js(경로·장소·별 지도)
+│  ├─ map/             engine.js(지도 엔진), world.js(세계), korea.js(대한민국), globe.js(지구본·전환 연출), effects.js(금박 긁기·파티클·별), mini.js(경로·장소·별 지도)
 │  ├─ screens/         trips.js(연대기), wish.js(위시리스트), ai.js(AI 추천), stats-view.js(통계), share.js(공유 스튜디오)
 │  ├─ share/           model.js(포스터 숫자·배치), poster.js(Canvas 그리기)
 │  ├─ ai/              config.js(모델·공항 기본값), prompt.js(이력 요약·프롬프트·스키마·검증), merge.js(병합·합의·좌표 보정), openrouter.js(API 호출·키 보관)
