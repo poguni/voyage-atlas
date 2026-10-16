@@ -164,6 +164,24 @@ export function setPlaceNote(placeId, note, meta) {
   commit({ ...state, places: { ...state.places, [placeId]: next } }, { reason: 'note', placeId });
 }
 
+// ---------- AI 추천(PRD 9.7, F7-6, F7-10) ----------
+const AI_HISTORY_MAX = 20;
+
+// 추천 실행 기록 저장(같은 id면 바꿈: 실패 모델 재시도). costs: 이번에 새로 든 비용 기록
+export function saveAiRun(run, costs = []) {
+  const others = state.aiHistory.filter(r => r.id !== run.id);
+  const aiHistory = [run, ...others].sort((a, b) => b.at.localeCompare(a.at)).slice(0, AI_HISTORY_MAX);
+  commit({ ...state, aiHistory, costLog: [...state.costLog, ...costs] }, { reason: 'ai' });
+}
+
+// 다시 추천에서 제외: { key, name, iso2 }
+export function excludeRec(item) {
+  const prev = state;
+  if (state.aiExcluded.some(x => x.key === item.key)) return () => {};
+  commit({ ...state, aiExcluded: [...state.aiExcluded, { ...item, at: now() }] }, { reason: 'ai' });
+  return () => commit(prev, { reason: 'ai', undo: true });
+}
+
 // 백업 복원: mode = 'overwrite' | 'merge'
 export function restoreState(incoming, mode) {
   const prev = state;

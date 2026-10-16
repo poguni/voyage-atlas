@@ -3,7 +3,7 @@ export const SCHEMA_VERSION = 1;
 export const APP_ID = 'voyage-atlas';
 
 export const emptyState = () => ({
-  schemaVersion: SCHEMA_VERSION, places: {}, trips: [], wishlist: [], aiHistory: [], costLog: [], achievements: {},
+  schemaVersion: SCHEMA_VERSION, places: {}, trips: [], wishlist: [], aiHistory: [], aiExcluded: [], costLog: [], achievements: {},
 });
 
 // 특별자치도 전환 전 코드(강원 42, 전북 45)로 저장된 옛 데이터를 새 코드로 바꿉니다(PRD 8.4).
@@ -52,6 +52,7 @@ export function mergeStates(cur, inc) {
     trips: unionBy(cur.trips, inc.trips, t => t.id),
     wishlist: unionBy(cur.wishlist, inc.wishlist, w => w.placeId),
     aiHistory: unionBy(cur.aiHistory, inc.aiHistory, x => x.id),
+    aiExcluded: unionBy(cur.aiExcluded, inc.aiExcluded, x => x.key),
     costLog: unionBy(cur.costLog, inc.costLog, x => x.id),
     achievements: { ...inc.achievements, ...cur.achievements },
   };

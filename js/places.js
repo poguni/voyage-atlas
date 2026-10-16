@@ -4,6 +4,7 @@
 import { CONT, loadJSON } from './data.js';
 import { isCountry, isSido, KOREA } from './stats.js';
 import { getState } from './store.js';
+import { normName, distKm } from './ai/merge.js';
 
 const reg = { countries: new Map(), sido: new Map() };
 const cityIndex = new Map();   // placeId → 저장용 정보 { name_ko, name_en, countryId, sido?, lat, lon, admin1? }
@@ -98,4 +99,19 @@ export function loadCityItems() {
     return items;
   });
   return cityLoading;
+}
+
+// AI 추천지 → 도시·시군구 장소 ID(위시에 담을 때). 같은 나라에서 이름이 같은 60km 이내 도시를 먼저,
+// 없으면 25km 이내 가장 가까운 도시. 찾지 못하면 null(나라로 담음)
+export async function findCity(countryId, ll, names = []) {
+  await loadCityItems();
+  const want = new Set(names.map(normName).filter(Boolean));
+  let byName = null, nameKm = 60, near = null, nearKm = 25;
+  for (const [placeId, m] of cityIndex) {
+    if (m.countryId !== countryId) continue;
+    const d = distKm(ll, [m.lon, m.lat]);
+    if (d < nameKm && (want.has(normName(m.name_ko)) || want.has(normName(m.name_en)))) { byName = placeId; nameKm = d; }
+    if (d < nearKm) { near = placeId; nearKm = d; }
+  }
+  return byName ?? near;
 }

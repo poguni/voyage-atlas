@@ -243,6 +243,33 @@
   </div>
 </section>
 
+<!-- ===================== AI 추천(시안 07) ===================== -->
+<section class="screen" id="ai" aria-labelledby="aiTitle" hidden>
+  <div class="stage ai-stage">
+    <div class="map-wrap" id="aiMap"><div class="map-skeleton" aria-hidden="true"></div></div>
+    <aside class="overlay glass ai-cond" aria-label="추천 조건">
+      <div class="eyebrow">AI Destination Oracle</div>
+      <h1 class="h-display ai-title" id="aiTitle">세 AI가 그린 <span class="gold-text">다음 별자리</span></h1>
+      <div class="row ai-chips" id="aiChips"></div>
+      <div class="row ai-models" id="aiModels" aria-live="polite"></div>
+      <div class="row ai-acts">
+        <button class="btn btn-sm" type="button" id="aiCondBtn" aria-controls="aiPanel">조건 바꾸기</button>
+        <select class="input input-sm" id="aiHistory" aria-label="지난 추천 다시 보기"></select>
+      </div>
+    </aside>
+    <aside class="overlay glass ai-list" aria-label="추천 목록">
+      <div class="row"><h2 id="aiCount">추천</h2><span class="faint mono small" id="aiOrder"></span><span class="spacer"></span><button class="btn btn-sm btn-primary" type="button" id="aiRun">↻ 새로 추천받기</button></div>
+      <div class="rec-list" id="recList"></div>
+      <p class="faint small ai-safety">비행시간·예산은 대략적인 값이에요. 출발 전 <a href="https://www.0404.go.kr" target="_blank" rel="noopener">외교부 해외안전여행</a> 정보를 확인하세요.</p>
+    </aside>
+    <div class="overlay glass legend ai-legend">
+      <span><svg width="16" height="16" viewBox="-12 -12 24 24" aria-hidden="true" class="lg-star big"><use href="#sparkle" x="-12" y="-12" width="24" height="24"/></svg>3/3 합의</span>
+      <span><svg width="12" height="12" viewBox="-12 -12 24 24" aria-hidden="true" class="lg-star"><use href="#sparkle" x="-12" y="-12" width="24" height="24"/></svg>2/3 합의</span>
+      <span><i class="sw dot" style="background:var(--claude)"></i>Claude</span><span><i class="sw dot" style="background:var(--gpt)"></i>GPT</span><span><i class="sw dot" style="background:var(--gemini)"></i>Gemini</span>
+    </div>
+  </div>
+</section>
+
 <!-- ===================== 공유 스튜디오(시안 08) ===================== -->
 <section class="screen" id="share" aria-labelledby="shareTitle" hidden>
   <div class="page page-studio">
@@ -308,6 +335,22 @@
       <h3>통계</h3>
       <div class="set-row"><label class="switch"><input type="checkbox" id="setTransit"> 경유(공항만 들른 곳)를 방문 국가 수에 포함</label></div>
       <p class="faint set-note">국가 수 기준: UN 회원국 193 + 옵서버 2(바티칸, 팔레스타인) = 195개국. 대만·홍콩 등은 '지역'으로 따로 셉니다.</p>
+    </section>
+    <section class="set-card gold" id="aiSettings">
+      <h3>AI 추천 · OpenRouter</h3>
+      <label class="field"><span>API 키</span><input class="input mono" type="password" id="setKey" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…"></label>
+      <div class="set-row"><div class="seg" role="group" aria-label="키 보관 방법" id="keyMode"><button type="button" data-mode="local" aria-pressed="true">이 기기에 저장</button><button type="button" data-mode="session" aria-pressed="false">이번 세션만</button></div></div>
+      <div class="row"><button class="btn btn-sm btn-primary" type="button" id="keySave">키 저장</button><button class="btn btn-sm" type="button" id="keyTest">연결 테스트</button><button class="btn btn-sm btn-ghost" type="button" id="keyClear">키 지우기</button></div>
+      <p class="set-note" id="keyStatus" role="status"></p>
+      <p class="faint set-note">키는 OpenRouter에만 보내고 백업 파일에는 넣지 않아요. OpenRouter에서 키의 사용 한도를 정해 두면 안전해요.</p>
+      <div class="set-sub">모델 <span class="faint">(100만 토큰당 입력/출력 단가)</span></div>
+      <div class="model-rows" id="modelRows"></div>
+      <div class="row"><button class="btn btn-sm" type="button" id="priceBtn">↻ 단가 다시 조회</button><span class="faint small" id="priceInfo"></span></div>
+      <div class="field-row set-fields">
+        <label class="field"><span>홈 공항</span><select class="input" id="setAirport"></select></label>
+        <label class="field"><span>환율(원/달러)</span><input class="input input-num" type="number" id="setFx" min="100" step="10"></label>
+      </div>
+      <p class="faint set-note" id="aiSpend"></p>
     </section>
     <section class="set-card gold">
       <h3>백업</h3>
@@ -431,11 +474,61 @@
   </footer>
 </aside>
 
+<!-- 비용 확인 창(Boarding Receipt, DESIGN.md 6.10) -->
+<div class="modal" id="aiReceipt" hidden role="dialog" aria-modal="true" aria-labelledby="rcTitle">
+  <div class="receipt glass">
+    <div class="eyebrow">Boarding Receipt · 실행 전 확인</div>
+    <h2 id="rcTitle" class="rc-title">AI 추천을 실행할까요?</h2>
+    <p class="dim rc-desc">고른 모델마다 1회씩 호출합니다. 토큰 수와 금액은 추정치이며 실제와 다를 수 있어요. 실행 후 실제 비용을 기록합니다.</p>
+    <table>
+      <thead><tr><th>모델</th><th>입력</th><th>출력</th><th>예상 비용</th></tr></thead>
+      <tbody id="rcRows"></tbody>
+      <tfoot><tr><td id="rcCount"></td><td></td><td></td><td id="rcTotal"></td></tr></tfoot>
+    </table>
+    <p class="form-error" id="rcError" role="alert"></p>
+    <div class="row rc-acts"><button class="btn btn-ghost" type="button" id="rcCancel">취소</button><button class="btn btn-primary" type="button" id="rcGo">✦ 추천 실행</button></div>
+  </div>
+</div>
+
+<!-- AI 추천 조건 패널(PRD F7-1) -->
+<aside class="panel glass panel-form" id="aiPanel" role="dialog" aria-labelledby="aiPanelTitle" hidden>
+  <header class="panel-head">
+    <div><div class="eyebrow">Oracle</div><h2 id="aiPanelTitle">추천 조건</h2></div>
+    <button class="btn icon-btn btn-ghost" type="button" data-close-panel aria-label="닫기">✕</button>
+  </header>
+  <form class="panel-body form" id="aiForm" novalidate>
+    <div class="field-row">
+      <label class="field"><span>여행 시기</span><input class="input" type="month" id="acMonth" required data-autofocus></label>
+      <label class="field"><span>기간</span><span class="inline-field"><input class="input input-num" type="number" id="acDays" min="1" max="60" required> 일</span></label>
+    </div>
+    <fieldset class="field"><legend>동행</legend>
+      <div class="seg seg-wrap" role="group" aria-label="동행 유형" id="acCompanion"></div>
+      <label class="inline-field">인원 <input class="input input-num" type="number" id="acParty" min="1" max="20"> 명</label>
+    </fieldset>
+    <div class="field-row">
+      <label class="field"><span>1인 예산(항공 포함)</span><span class="inline-field"><input class="input input-num" type="number" id="acBudget" min="10" step="10"> 만 원</span></label>
+      <label class="field"><span>출발 공항</span><select class="input" id="acOrigin"></select></label>
+    </div>
+    <fieldset class="field"><legend>관심사</legend><div class="row chips-input" role="group" aria-label="관심사" id="acInterests"></div></fieldset>
+    <fieldset class="field"><legend>지역 범위</legend>
+      <div class="seg" role="group" aria-label="지역 범위" id="acScope"></div>
+    </fieldset>
+    <label class="switch"><input type="checkbox" id="acOnlyNew"> 안 가 본 나라만</label>
+    <p class="faint set-note">내 기록에서는 방문한 곳·별점·여행 패턴·위시리스트만 보내요. 메모, 여행 제목, 동행인 이름은 보내지 않아요.</p>
+    <p class="form-error" id="acError" role="alert"></p>
+  </form>
+  <footer class="panel-foot">
+    <span class="spacer"></span>
+    <button class="btn btn-ghost" type="button" data-close-panel>취소</button>
+    <button class="btn btn-primary" type="submit" form="aiForm">✦ 이 조건으로 추천받기</button>
+  </footer>
+</aside>
+
 <nav class="glass tabbar" aria-label="주요 화면" id="tabbar">
   <a href="#home" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>지도</a>
   <a href="#trips" data-tab="trips"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 4v16M5 6h10l-2 3 2 3H5"/></svg>연대기</a>
   <a href="#wish" data-tab="wish"><svg viewBox="-12 -12 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M0-10C1-3 3-1 10 0 3 1 1 3 0 10-1 3-3 1-10 0-3-1-1-3 0-10Z"/></svg>위시</a>
-  <a href="#ai" data-tab="ai" aria-disabled="true" title="준비 중(Phase 4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/><circle cx="12" cy="12" r="3"/></svg>AI 추천</a>
+  <a href="#ai" data-tab="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/><circle cx="12" cy="12" r="3"/></svg>AI 추천</a>
   <a href="#stats" data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>통계</a>
   <a href="#share" data-tab="share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v5h14v-5"/></svg>공유</a>
 </nav>

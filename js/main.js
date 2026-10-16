@@ -1,4 +1,4 @@
-// 앱 진입점: 상태 불러오기, 화면 이동(지도·연대기·위시·통계·공유), 지도 보기 전환, 장소 클릭(팝오버·빠른 색칠·금박 긁기),
+// 앱 진입점: 상태 불러오기, 화면 이동(지도·연대기·위시·AI 추천·통계·공유), 지도 보기 전환, 장소 클릭(팝오버·빠른 색칠·금박 긁기),
 // HUD, 검색, 패널(목록·설정·여행·장소 상세·위시)
 import { geoCentroid } from 'd3';
 import { feature } from 'topojson-client';
@@ -30,11 +30,13 @@ import { initTrips, renderTrips, selectTrip } from './screens/trips.js';
 import { initWish, renderWish } from './screens/wish.js';
 import { initStats, renderStats } from './screens/stats-view.js';
 import { initShare, renderShare } from './screens/share.js';
+import { initAi, renderAi } from './screens/ai.js';
+import { initAiSettings, refreshPrices } from './ui/ai-settings.js';
 
 const $ = id => document.getElementById(id);
 const VIEWS = { world: worldView, korea: koreaView };
-const ROUTES = ['home', 'trips', 'wish', 'stats', 'share'];
-const TITLES = { home: '지도', trips: '여행 연대기', wish: '위시리스트', stats: '통계', share: '공유 스튜디오' };
+const ROUTES = ['home', 'trips', 'wish', 'ai', 'stats', 'share'];
+const TITLES = { home: '지도', trips: '여행 연대기', wish: '위시리스트', ai: 'AI 추천', stats: '통계', share: '공유 스튜디오' };
 const box = $('map');
 let current = null;      // 현재 지도 객체
 let viewName = 'world';
@@ -218,6 +220,7 @@ function renderRoute() {
   else if (route === 'wish') renderWish();
   else if (route === 'stats') renderStats();
   else if (route === 'share') renderShare().catch(err => console.error(err));
+  else if (route === 'ai') renderAi().catch(err => console.error(err));
 }
 
 async function go(name) {
@@ -298,6 +301,9 @@ async function start() {
   initWish({ classFor, openWishForm, openTripForm: openTrip, openPlace: openPlaceDetail });
   initStats({ openPlace: openPlaceDetail, goTrip });
   initShare();
+  initAiSettings();
+  initAi({ classFor, statusText, openPlace: openPlaceDetail, openSettings: () => { if (!$('settingsPanel').hidden) return; $('settingsBtn').click(); } });
+  refreshPrices({ quiet: true });   // 모델 단가(키 필요 없음)
 
   $('listBtn').addEventListener('click', () => { openPanel('listPanel'); renderListPanel(); });
   $('settingsBtn').addEventListener('click', () => openPanel('settingsPanel'));
