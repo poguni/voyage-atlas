@@ -1,5 +1,5 @@
 // 통계 화면(시안 04, PRD F4): 성과 제목 + 기간(전체/연도) → KPI 4칸 → 대륙 도넛 | 연도별 막대 → 많이 간 나라 TOP 5 | 기록으로 본 나
-// 배지 보관함과 이동 거리는 Phase 5에서 추가합니다(지금 4번째 KPI는 여행 횟수).
+// 아래에 배지 보관함(Phase 5a). 이동 거리는 Phase 5e에서 추가합니다(지금 4번째 KPI는 여행 횟수).
 import * as d3 from 'd3';
 import { getState } from '../store.js';
 import { settings, motionReduced } from '../settings.js';
@@ -10,6 +10,8 @@ import {
 import { CONT, CONT_COLOR, CONT_ORDER } from '../data.js';
 import { countryList, countryOfId } from '../places.js';
 import { flagHTML } from '../ui/flag.js';
+import { coinSVG } from '../ui/milestone.js';
+import { evaluate, nextGoals, vaultOrder } from '../badges.js';
 import { esc } from '../env.js';
 
 const $ = id => document.getElementById(id);
@@ -69,6 +71,7 @@ export function renderStats() {
     kpi(trips.length, '번', `해외 ${trips.length - domestic}번 · 국내 ${domestic}번의 여정`),
   ].join('');
 
+  renderBadges(s, countries, today);
   drawDonut(byCont, visited);
   drawBars(daysByYear(s, today).slice(-10), year ?? +today.slice(0, 4));
 
@@ -91,6 +94,19 @@ export function renderStats() {
   $('statsFacts').innerHTML = facts.length
     ? facts.map(([t, sub, v]) => `<li><span class="rk">✦</span><span>${t} ${sub}</span><b>${v}</b></li>`).join('')
     : '<li class="empty-li dim">여행을 기록하면 나만의 여행 습관이 보여요.</li>';
+}
+
+// 배지 보관함(F5-3): 달성은 금박 + 날짜, 잠김은 은색 + 진행 막대. 머리에 다음 목표(F5-4)
+const ym = d => `${d.slice(0, 4)}. ${+d.slice(5, 7)}`;
+function renderBadges(s, countries, today) {
+  const list = evaluate(s, countries, { includeTransit: settings.includeTransit, today });
+  const earned = list.filter(b => b.earned).length;
+  $('badgeCount').textContent = `${earned} / ${list.length} 획득`;
+  const next = nextGoals(s, countries, { includeTransit: settings.includeTransit, today });
+  $('badgeNext').innerHTML = next.length ? `다음 목표: <b class="gold-text">${esc(next[0].short)}</b>` : '모든 목표를 이뤘어요!';
+  $('badges').innerHTML = vaultOrder(list).map(b => `<li class="badge${b.earned ? '' : ' locked'}">${coinSVG(b.icon, 72, b.earned ? 'gold' : 'silver')}
+    <b>${esc(b.title)}</b><small>${b.earned ? (b.date ? ym(b.date) : '달성') : `${b.value} / ${b.target}`}</small>
+    ${b.earned ? '' : `<div class="progress" role="progressbar" aria-label="${esc(b.title)} 진행률" aria-valuenow="${Math.round(b.progress * 100)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${b.progress * 100}%"></span></div>`}</li>`).join('');
 }
 
 // 대륙별 비율 도넛(DESIGN 6.14): 안쪽 반지름 68%, 조각 간격, 가운데 큰 숫자, 오른쪽에 이름 + 개수·비율

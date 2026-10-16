@@ -5,7 +5,7 @@ import { feature } from 'topojson-client';
 import { settings, motionReduced, onSettings } from './settings.js';
 import { esc, josa } from './env.js';
 import { loadJSON, loadCountries } from './data.js';
-import { loadState, getState, subscribe, setPlaceStatus, setManyStatus, toggleWish } from './store.js';
+import { loadState, getState, subscribe, setPlaceStatus, setManyStatus, toggleWish, recordAchievements } from './store.js';
 import {
   visitCount, placeStatus, isWished, levelClass, countryStats, koreaStats, isCountry, isSido, KR_SIDO, sidoId,
   daysSummary, tripStarted, tripYear, todayStr,
@@ -30,6 +30,8 @@ import { initTrips, renderTrips, selectTrip } from './screens/trips.js';
 import { initWish, renderWish } from './screens/wish.js';
 import { initStats, renderStats } from './screens/stats-view.js';
 import { initShare, renderShare } from './screens/share.js';
+import { initMilestone, celebrate } from './ui/milestone.js';
+import { newlyEarned, nextGoals, headline, metrics } from './badges.js';
 import { initAi, renderAi } from './screens/ai.js';
 import { initAiSettings, refreshPrices } from './ui/ai-settings.js';
 
@@ -172,6 +174,26 @@ function renderHuds(anim) {
   renderKoreaHud(ks, sidoName, anim, motionReduced());
 }
 
+// ---------- 마일스톤(PRD F5-1·F5-2) ----------
+// 새로 달성한 배지를 기록하고 축하 창을 띄웁니다. 앱을 열 때 이미 달성해 있던 배지, 백업 복원·초기화·실행 취소는 조용히 기록만 합니다.
+let badgesReady = false;
+function checkBadges(meta = {}) {
+  const opts = { includeTransit: settings.includeTransit };
+  const { list, dates } = newlyEarned(getState(), countryList(), opts);
+  if (!list.length) return;
+  recordAchievements(dates);
+  if (!badgesReady || meta.quiet || meta.undo || meta.reason === 'restore' || meta.reason === 'reset') return;
+  const b = headline(list);
+  const next = nextGoals(getState(), countryList(), opts)[0];
+  const desc = [
+    b.kind === 'countries' && `세계의 ${metrics(getState(), countryList(), opts).pct.toFixed(1)}%를 걸었어요.`,
+    next ? `다음 목표: ${next.text}` : '모든 목표를 이뤘어요!',
+    list.length > 1 && `배지 ${list.length - 1}개도 함께 얻었어요.`,
+  ].filter(Boolean).map(t => (/[.!?]$/.test(t) ? t : `${t}.`)).join(' ');
+  // 금박 긁기 연출(850ms)이 끝난 뒤에 축하
+  setTimeout(() => celebrate(b, desc), motionReduced() ? 0 : 900);
+}
+
 // ---------- 첫 실행 화면(DESIGN.md 9장 빈 상태) ----------
 function updateEmpty() {
   const s = getState();
@@ -301,6 +323,7 @@ async function start() {
   initWish({ classFor, openWishForm, openTripForm: openTrip, openPlace: openPlaceDetail });
   initStats({ openPlace: openPlaceDetail, goTrip });
   initShare();
+  initMilestone();
   initAiSettings();
   initAi({ classFor, statusText, openPlace: openPlaceDetail, openSettings: () => { if (!$('settingsPanel').hidden) return; $('settingsBtn').click(); } });
   refreshPrices({ quiet: true });   // 모델 단가(키 필요 없음)
@@ -326,13 +349,17 @@ async function start() {
     if (route !== 'home') renderRoute();
     // 메모를 쓰는 중에는 다시 그리지 않음(커서가 사라지지 않도록)
     if (placeDetailOpen() && meta.reason !== 'note') renderPlaceDetail();
+    if (meta.reason !== 'achievement') queueMicrotask(() => checkBadges(meta));
   });
   onSettings(() => {
+    checkBadges({ quiet: true });
     renderHuds(false);
     current?.land.attr('filter', motionReduced() ? null : 'url(#grain)');
     if (route !== 'home') renderRoute();
   });
 
+  checkBadges();          // 이미 달성해 있던 배지는 조용히 기록
+  badgesReady = true;
   renderHuds(false);
   updateEmpty();
   addEventListener('hashchange', () => go(location.hash.slice(1)));

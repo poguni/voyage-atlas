@@ -182,6 +182,11 @@ export function excludeRec(item) {
   return () => commit(prev, { reason: 'ai', undo: true });
 }
 
+// 배지 달성 날짜 기록(PRD F5, 10.2): { 배지 ID: 날짜 }
+export function recordAchievements(dates) {
+  commit({ ...state, achievements: { ...state.achievements, ...dates } }, { reason: 'achievement' });
+}
+
 // 백업 복원: mode = 'overwrite' | 'merge'
 export function restoreState(incoming, mode) {
   const prev = state;

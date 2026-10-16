@@ -543,6 +543,27 @@ select.input{cursor:pointer}
 .model-row{display:grid;grid-template-columns:1fr;gap:6px}
 .set-fields{margin-top:14px}
 
+/* ---------- 배지·마일스톤(DESIGN.md 6.11·6.16) ---------- */
+.coin-svg{display:block}
+.badge-head{gap:10px}
+.badge-head h2{margin:0}
+.badge-grid{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:16px}
+.badge{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:16px 10px;border-radius:18px;background:var(--panel-2);border:1px solid var(--line-2)}
+.badge b{font-size:13px}
+.badge small{font-size:11px;color:var(--text-faint)}
+.badge.locked .coin-svg{filter:grayscale(1) brightness(.55);opacity:.7}
+.badge .progress{width:80%;height:4px}
+.milestone{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(4,6,18,.55);backdrop-filter:blur(4px);padding:16px}
+.milestone[hidden]{display:none}
+.milestone .box{width:min(420px,100%);padding:36px 28px 28px;text-align:center;border-radius:28px;background:var(--panel-solid);animation:pop .6s var(--ease)}
+@keyframes pop{0%{opacity:0;transform:scale(.7) rotate(-6deg)}100%{opacity:1;transform:none}}
+.milestone .coin{margin:0 auto 18px;width:132px;height:132px;animation:coin-spin 1.2s var(--ease)}
+@keyframes coin-spin{from{transform:rotateY(540deg)}to{transform:rotateY(0)}}
+.ms-title{font-family:var(--font-display);font-size:30px;margin:8px 0}
+.ms-desc{margin:0 0 20px;line-height:1.6;word-break:keep-all}
+.ms-acts{justify-content:center;gap:8px}
+.fx-canvas.confetti{position:fixed;z-index:99}
+
 @media (max-width:1280px){
   .dream{top:92px}
   .stage.has-dream .hint{top:282px}
@@ -572,6 +593,9 @@ select.input{cursor:pointer}
   #home .stage{padding-bottom:96px}
   .toast-wrap{bottom:96px}
   .kpis{grid-template-columns:1fr 1fr;gap:12px}
+  .badge-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .badge{padding:12px 6px}
+  .badge .coin-svg{width:56px;height:56px}
   .kpi{padding:16px}
   .kpi .num{font-size:38px}
   .kpi .unit{font-size:15px}

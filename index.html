@@ -240,6 +240,10 @@
       <div class="card"><h2>가장 많이 간 나라</h2><ol class="top5 top-flags" id="statsTop"></ol></div>
       <div class="card"><h2>기록으로 본 나</h2><ol class="top5 facts" id="statsFacts"></ol></div>
     </div>
+    <div class="card" id="badgeCard">
+      <div class="row badge-head"><h2>배지 보관함</h2><span class="tag gold" id="badgeCount"></span><span class="spacer"></span><span class="dim small" id="badgeNext"></span></div>
+      <ul class="badge-grid" id="badges"></ul>
+    </div>
   </div>
 </section>
 
@@ -532,6 +536,17 @@
   <a href="#stats" data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>통계</a>
   <a href="#share" data-tab="share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 14v5h14v-5"/></svg>공유</a>
 </nav>
+
+<!-- 마일스톤 축하 창(DESIGN.md 6.16) -->
+<div class="milestone" id="milestone" hidden role="dialog" aria-modal="true" aria-labelledby="msTitle" aria-describedby="msDesc">
+  <div class="box glass">
+    <div class="coin" id="msCoin"></div>
+    <div class="eyebrow">Milestone Unlocked</div>
+    <h2 id="msTitle" class="ms-title"></h2>
+    <p class="dim ms-desc" id="msDesc"></p>
+    <div class="row ms-acts"><button class="btn btn-ghost" type="button" id="msVault">배지 보관함 보기</button><button class="btn btn-primary" type="button" id="msClose">계속 여행하기</button></div>
+  </div>
+</div>
 
 <div class="toast-wrap" id="toasts" aria-live="polite"></div>
 <div class="tip" id="tip" role="tooltip"></div>
