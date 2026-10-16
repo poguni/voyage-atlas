@@ -27,7 +27,7 @@ npm test
 ```
 
 - `tests/stats.test.js`: 방문 횟수(단순 표시 흡수), 대한민국 자동 방문, 경유 포함 여부, 국가·대륙·한국 통계, 백업 왕복·합치기·마이그레이션
-- `tests/trips.test.js`: 여행 일수 합집합(겹친 날), 국내·해외, 연말을 넘는 여행, 예정 여행 제외, 많이 간 나라, 기록으로 본 나, D-day
+- `tests/trips.test.js`: 여행 일수 합집합(겹친 날), 국내·해외, 연말을 넘는 여행, 예정 여행 제외, 많이 간 나라, 기록으로 본 나, D-day, 전체 연대기 재생 장면
 - `tests/badges.test.js`: 배지 달성·진행률, 달성 날짜(여행 순서대로 다시 쌓기), 새로 달성한 배지, 다음 목표, 보관함 순서
 - `tests/ai.test.js`: AI 이력 요약(메모·제목 미포함), 제외 목록, 응답 검증, 3모델 병합·합의, 좌표 보정, 비용 추정(저장된 응답 샘플, 실제 호출 없음)
 - `tests/share.test.js`: 공유 포스터 숫자(월드·한국), 날짜 범위, 4가지 크기 배치 겹침, 저장 해상도
@@ -80,7 +80,7 @@ VoyageAtlas/
 │  ├─ screens/         trips.js(연대기), wish.js(위시리스트), ai.js(AI 추천), stats-view.js(통계), share.js(공유 스튜디오)
 │  ├─ share/           model.js(포스터 숫자·배치), poster.js(Canvas 그리기)
 │  ├─ ai/              config.js(모델·공항 기본값), prompt.js(이력 요약·프롬프트·스키마·검증), merge.js(병합·합의·좌표 보정), openrouter.js(API 호출·키 보관)
-│  └─ ui/              popover, hud, search, toast, panel, list-panel, settings-panel, ai-settings(AI 키·모델·홈 공항·환율), milestone(배지 코인·축하 창), trip-form, wish-form, place-detail, dream, flag(국기 이미지), tooltip, sky
+│  └─ ui/              popover, hud, search, toast, panel, list-panel, settings-panel, ai-settings(AI 키·모델·홈 공항·환율), milestone(배지 코인·축하 창), timelapse(전체 연대기 재생), trip-form, wish-form, place-detail, dream, flag(국기 이미지), tooltip, sky
 ├─ data/               지도·국가 데이터(전처리 결과)
 ├─ assets/flags/       국기 SVG
 ├─ tools/              데이터 전처리 스크립트
