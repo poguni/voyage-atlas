@@ -25,6 +25,7 @@ python -m http.server 8080
 - 한 번 열면 서비스 워커(`sw.js`)가 앱 코드·라이브러리·글꼴·지도·도시 데이터·국기 전체를 캐시에 받아 둡니다. 그 뒤로는 인터넷 없이 열고 기록할 수 있습니다(AI 추천만 온라인 필요).
 - 앱 코드(html·js·css)는 **네트워크 먼저**라서, 배포한 뒤 캐시 이름(`va-cache-v1`)을 바꾸지 않아도 다음에 열 때 최신 코드가 적용됩니다. 지도·국기·데이터는 **캐시 먼저**(뒤에서 새로 받음)라서 `npm run data`로 데이터를 바꾸면 **두 번째로 열 때** 반영됩니다.
 - `localhost`에서도 서비스 워커가 동작합니다. 데이터가 바로 안 바뀌어 보이면 한 번 더 새로 고치거나, 개발자 도구 → Application → Service workers에서 [Update on reload]를 켭니다.
+- 3D 지구본 라이브러리(globe.gl, 약 1.9MB)는 [✦ 3D]를 처음 누를 때 받아 캐시합니다. 오프라인에서 3D를 쓰려면 온라인일 때 한 번 열어 두어야 합니다.
 - 한글 글꼴은 화면에 나온 글자의 글꼴 조각만 캐시합니다. 오프라인에서 처음 보는 글자는 기본 글꼴로 보일 수 있습니다.
 - 앱 아이콘: `assets/icons/icon.svg`(일반), `icon-maskable.svg`(안드로이드 마스크용·애플)를 고친 뒤 PNG(`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` 180px)를 다시 만듭니다. 크롬으로 SVG를 열어 같은 크기로 캡처하면 됩니다(`chrome --headless --screenshot --window-size=512,512 --default-background-color=00000000`).
 
@@ -39,6 +40,7 @@ npm test
 - `tests/badges.test.js`: 배지 달성·진행률, 달성 날짜(여행 순서대로 다시 쌓기), 새로 달성한 배지, 다음 목표, 보관함 순서
 - `tests/ai.test.js`: AI 이력 요약(메모·제목 미포함), 제외 목록, 응답 검증, 3모델 병합·합의, 좌표 보정, 비용 추정(저장된 응답 샘플, 실제 호출 없음)
 - `tests/share.test.js`: 공유 포스터 숫자(월드·한국·올해의 여정·여행 카드), 날짜 범위, 크기별 배치 겹침, 저장 해상도(A3 포함)
+- `tests/phase6.test.js`: 트립픽 JSON(다녀온 곳·후보·제외 조건 200자), 위시 보드 순서·배치, 사진 썸네일 크기
 - `tests/data-io.test.js`: CSV 쓰기·읽기(따옴표·줄바꿈·탭), 여행·방문 CSV, 이름 목록 인식(한글·영어·ISO·다른 이름·시도), 백업 권유 조건
 - `tests/hangul.test.js`: 초성 검색
 
@@ -81,15 +83,17 @@ VoyageAtlas/
 │  ├─ settings.js      설정(테마, 애니메이션 줄이기, 효과음, 경유 포함)
 │  ├─ csv.js           CSV 내보내기·이름 목록 가져오기(순수 함수)
 │  ├─ pwa.js           서비스 워커 등록·캐시 채우기·오프라인 표시
+│  ├─ photos.js        장소 대표 사진(줄이기·IndexedDB 별도 저장소·백업용 변환), thumb.js(크기 계산)
+│  ├─ trippick.js      트립픽 연동 JSON(순수 함수)
 │  ├─ places.js        장소 ID → 이름·국기·좌표, 검색 항목(도시는 처음 검색할 때 불러옴)
 │  ├─ format.js        날짜·별점·동행·색 표시
 │  ├─ badges.js        마일스톤·배지 계산(달성, 달성 날짜, 다음 목표)
 │  ├─ hangul.js        초성 검색
 │  ├─ env.js           글자 이스케이프, 조사, 숫자 카운트업
 │  ├─ data.js          data/*.json 불러오기, 국가 사전
-│  ├─ map/             engine.js(지도 엔진), world.js(세계), korea.js(대한민국 시도·시군구), pins.js(도시 핀), globe.js(지구본·전환 연출), effects.js(금박 긁기·파티클·별), mini.js(경로·장소·별 지도)
+│  ├─ map/             engine.js(지도 엔진), world.js(세계), korea.js(대한민국 시도·시군구), pins.js(도시 핀), globe.js(지구본·전환 연출), globe3d.js(3D 시네마틱 지구본, globe.gl 지연 로딩), effects.js(금박 긁기·파티클·별), mini.js(경로·장소·별 지도)
 │  ├─ screens/         trips.js(연대기), wish.js(위시리스트), ai.js(AI 추천), stats-view.js(통계), share.js(공유 스튜디오)
-│  ├─ share/           model.js(포스터 숫자·배치: 월드·한국·올해의 여정·여행 카드, A3), poster.js(Canvas 그리기·경로)
+│  ├─ share/           model.js(포스터 숫자·배치: 월드·한국·올해의 여정·여행 카드·위시 보드, A3), poster.js(Canvas 그리기·경로)
 │  ├─ ai/              config.js(모델·공항 기본값), prompt.js(이력 요약·프롬프트·스키마·검증), merge.js(병합·합의·좌표 보정), openrouter.js(API 호출·키 보관)
 │  └─ ui/              popover, hud(세계·한국·지구본 FLIGHT LOG), search, toast, panel, list-panel, settings-panel, ai-settings(AI 키·모델·홈 공항·환율), milestone(배지 코인·축하 창), sound(효과음), backup-banner(백업 권유), csv-io(CSV 저장·붙여 넣기 색칠), timelapse(전체 연대기 재생), legend(범례·색칠 기준), trip-form, wish-form, place-detail, dream, flag(국기 이미지), tooltip, sky
 ├─ data/               지도·국가 데이터(전처리 결과)
