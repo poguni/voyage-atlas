@@ -6,7 +6,7 @@ import {
   historySummary, exclusions, buildMessages, validateResult, parseContent, estimateTokens, costUSD, condKey, defaultConditions, SCHEMA,
 } from '../js/ai/prompt.js';
 import { mergeResults, checkCoords, normName, distKm, recKey } from '../js/ai/merge.js';
-import { MODELS } from '../js/ai/config.js';
+import { MODELS, onlineSlug } from '../js/ai/config.js';
 import { emptyState, mergeStates } from '../js/backup.js';
 
 const countries = JSON.parse(readFileSync('data/countries.ko.json', 'utf8'));
@@ -62,6 +62,17 @@ test('조건 키: 관심사 순서가 달라도 같은 조건', () => {
   assert.equal(condKey({ ...a, interests: ['음식', '사진'] }), condKey({ ...a, interests: ['사진', '음식'] }));
   assert.notEqual(condKey(a), condKey({ ...a, days: 8 }));
   assert.equal(defaultConditions(TODAY).month, '2027-01');
+});
+
+test('웹 검색(F7-12): 켜면 :online 슬러그와 프롬프트 한 줄, 끄면 예전 조건 키 그대로', () => {
+  const a = defaultConditions(TODAY);
+  assert.equal(condKey({ ...a, web: false }), JSON.stringify([a.month, a.days, a.companion, a.party, a.budget, a.origin, [...a.interests].sort(), a.onlyNew, a.scope]));
+  assert.notEqual(condKey(a), condKey({ ...a, web: true }));
+  assert.equal(onlineSlug('openai/gpt-6-luna', true), 'openai/gpt-6-luna:online');
+  assert.equal(onlineSlug('openai/gpt-6-luna:online', true), 'openai/gpt-6-luna:online');
+  assert.equal(onlineSlug('openai/gpt-6-luna', false), 'openai/gpt-6-luna');
+  assert.match(buildMessages({ ...a, web: true }, { summary: 'S' })[1].content, /웹 검색으로 최신 정보/);
+  assert.doesNotMatch(buildMessages(a, { summary: 'S' })[1].content, /웹 검색/);
 });
 
 test('출력 스키마: strict 모드라 모든 속성이 required', () => {

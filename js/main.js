@@ -39,6 +39,10 @@ import { renderLegend, yearClass, COLOR_MODES } from './ui/legend.js';
 import { newlyEarned, nextGoals, headline, metrics } from './badges.js';
 import { initAi, renderAi } from './screens/ai.js';
 import { initAiSettings, refreshPrices } from './ui/ai-settings.js';
+import { initCsvIO, openPasteBox } from './ui/csv-io.js';
+import { initBackupBanner, noteChange } from './ui/backup-banner.js';
+import { playScratch } from './ui/sound.js';
+import { initPwa } from './pwa.js';
 
 const $ = id => document.getElementById(id);
 const VIEWS = { world: worldView, korea: koreaView, globe: globeView };
@@ -151,6 +155,7 @@ function markVisited({ placeId, el, xy, mapId = placeId }, screen, { quick = fal
   const done = current && current.view !== 'globe' && el?.isConnected && (mapId === placeId || !landCount)
     ? scratch(current, el, xy, level, { quick }) : Promise.resolve();
   particles(box.querySelector('.fx-canvas'), screen[0], screen[1], { n: quick ? 12 : 36 });
+  playScratch({ quick });
   const undo = setPlaceStatus(placeId, 'visited', { quick, meta: placeMeta(placeId) });
   done.then(() => current?.refresh());
   const name = placeInfo(placeId).name;
@@ -427,6 +432,8 @@ async function start() {
     },
   });
   initSettingsPanel();
+  initCsvIO();
+  initBackupBanner(() => { const s = getState(); return !!(Object.keys(s.places).length || s.trips.length || s.wishlist.length); });
   initTripForm({ onDeleted: () => { if (route === 'trips') renderTrips(); } });
   initWishForm();
   const openTrip = opts => openTripForm({ onSaved: afterTripSaved, ...opts });
@@ -443,6 +450,7 @@ async function start() {
 
   $('listBtn').addEventListener('click', () => { openPanel('listPanel'); renderListPanel(); });
   $('settingsBtn').addEventListener('click', () => openPanel('settingsPanel'));
+  $('csvPaste').addEventListener('click', () => { openPanel('listPanel'); renderListPanel(); openPasteBox(); });
 
   // 빈 상태 카드
   $('emptyPaint').addEventListener('click', () => { $('quickPaint').checked = true; document.body.classList.add('quick-paint'); session.set('va-empty-closed'); updateEmpty(); toast('빠른 색칠을 켰어요. 다녀온 나라를 차례로 눌러 보세요.'); });
@@ -464,6 +472,7 @@ async function start() {
     // 메모를 쓰는 중에는 다시 그리지 않음(커서가 사라지지 않도록)
     if (placeDetailOpen() && meta.reason !== 'note') renderPlaceDetail();
     if (meta.reason !== 'achievement') queueMicrotask(() => checkBadges(meta));
+    noteChange(meta);
   });
   onSettings(() => {
     checkBadges({ quiet: true });
@@ -479,6 +488,7 @@ async function start() {
   updateEmpty();
   addEventListener('hashchange', () => go(location.hash.slice(1)));
   await go(location.hash.slice(1));
+  initPwa(list.map(c => c.iso2).filter(Boolean));
 }
 
 $('viewSeg').addEventListener('click', e => {

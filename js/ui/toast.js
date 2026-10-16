@@ -18,7 +18,8 @@ export function toast(html, action) {
   }
   const w = wrap();
   // 토스트가 쌓이지 않게 최근 3개만 남깁니다.
-  while (w.children.length >= 3) w.firstElementChild.remove();
+  const old = w.querySelectorAll('.toast');   // 백업 권유 배너는 남김
+  for (let i = 0; i <= old.length - 3; i++) old[i].remove();
   w.append(t);
   setTimeout(() => t.remove(), 5000);
 }

@@ -18,7 +18,8 @@ export const defaultConditions = (today = todayStr(), origin = 'ICN') => {
 };
 
 // 같은 조건인지 비교하는 키(관심사 순서는 무시)
-export const condKey = c => JSON.stringify([c.month, c.days, c.companion, c.party, c.budget, c.origin, [...c.interests].sort(), c.onlyNew, c.scope]);
+// 웹 검색(F7-12)은 켰을 때만 덧붙여, 예전에 저장한 추천의 조건 키가 그대로 맞게 합니다.
+export const condKey = c => JSON.stringify([c.month, c.days, c.companion, c.party, c.budget, c.origin, [...c.interests].sort(), c.onlyNew, c.scope, ...(c.web ? ['web'] : [])]);
 
 const ymKo = s => `${s.slice(0, 4)}년 ${+s.slice(5, 7)}월`;
 
@@ -100,7 +101,7 @@ export function buildMessages(cond, { summary, excluded = [], originName = '인�
 - 출발: ${originName}(${cond.origin})
 - 관심사: ${cond.interests.length ? cond.interests.join(', ') : '특별히 없음'}
 - 지역 범위: ${scope}
-${cond.onlyNew && cond.scope !== 'korea' ? '- 아직 가 본 적 없는 나라만 추천\n' : ''}
+${cond.onlyNew && cond.scope !== 'korea' ? '- 아직 가 본 적 없는 나라만 추천\n' : ''}${cond.web ? '- 웹 검색으로 최신 정보(새로 생긴 직항, 그 시기의 축제·행사)를 확인해 추천 이유에 반영\n' : ''}
 ## 나의 여행 이력
 ${summary}
 ${excluded.length ? `\n## 추천하지 말 곳\n${excluded.join(', ')}\n` : ''}

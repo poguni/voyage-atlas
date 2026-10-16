@@ -1,0 +1,17 @@
+{
+  "name": "나의 여정 지도 · Voyage Atlas",
+  "short_name": "여정 지도",
+  "description": "다녀온 곳은 금박을 긁어 빛나게, 가고 싶은 곳은 별로 새기는 나만의 세계 지도",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#070B1F",
+  "theme_color": "#070B1F",
+  "icons": [
+    { "src": "assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

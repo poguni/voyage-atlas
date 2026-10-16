@@ -1,10 +1,11 @@
 // 설정 패널(DESIGN.md 9장 설정·백업·복원, PRD F9-2, F10-4, F10-5)
-// 테마, 애니메이션 줄이기, 경유 통계 포함, JSON 백업·복원, 저장 공간, 데이터 초기화(2단계), 데이터 출처
+// 테마, 애니메이션 줄이기, 효과음, 경유 통계 포함, JSON 백업·복원, 저장 공간, 데이터 초기화(2단계), 데이터 출처
 import { settings, setSetting, setTheme, getTheme } from '../settings.js';
 import { getState, restoreState, resetState } from '../store.js';
 import { toBackup, parseBackup } from '../backup.js';
 import { toast } from './toast.js';
 import { esc } from '../env.js';
+import { playChime } from './sound.js';
 
 const $ = id => document.getElementById(id);
 const LAST_BACKUP = 'va-last-backup';
@@ -37,17 +38,26 @@ async function showStorage() {
   bar.parentElement.classList.toggle('warn', pct >= 80);
 }
 
-export function downloadBackup() {
-  const blob = new Blob([JSON.stringify(toBackup(getState()), null, 2)], { type: 'application/json' });
-  const d = new Date();
-  const name = `voyage-atlas-backup-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+// 파일 이름에 넣을 날짜(20261016)
+export const dateStamp = (d = new Date()) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+
+// 파일로 저장(백업 JSON, CSV)
+export function saveFile(blob, name) {
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
   document.body.append(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+export function downloadBackup() {
+  const blob = new Blob([JSON.stringify(toBackup(getState()), null, 2)], { type: 'application/json' });
+  const d = new Date();
+  const name = `voyage-atlas-backup-${dateStamp(d)}.json`;
+  saveFile(blob, name);
   try { localStorage.setItem(LAST_BACKUP, d.toISOString()); } catch { /* 무시 */ }
   showLastBackup();
+  document.dispatchEvent(new Event('va-backup'));   // 백업 권유 배너(F9-3) 초기화
   toast(`⤓ 백업 파일을 저장했어요 <span class="mono">${esc(name)}</span>`);
 }
 
@@ -81,6 +91,8 @@ export function initSettingsPanel() {
 
   $('setReduce').checked = settings.reduceMotion;
   $('setReduce').addEventListener('change', e => setSetting('reduceMotion', e.target.checked));
+  $('setSound').checked = !!settings.sound;
+  $('setSound').addEventListener('change', e => { setSetting('sound', e.target.checked); if (e.target.checked) playChime(); });
   $('setTransit').checked = settings.includeTransit;
   $('setTransit').addEventListener('change', e => setSetting('includeTransit', e.target.checked));
 

@@ -682,3 +682,32 @@ select.input{cursor:pointer}
 .wish-rate{margin-top:20px;padding-top:16px;border-top:1px solid var(--line-2);display:grid;gap:8px;font-size:14px}
 .wish-rate b{font-size:20px}
 .wish-bar > span{background:var(--wish)}
+
+/* ============================================================
+   Phase 5g: 오프라인 알약, 백업 권유 배너, 이름 목록 붙여 넣기
+   ============================================================ */
+/* 오프라인(DESIGN.md 11장): 상단 알약. 지도 도구줄은 그만큼 아래로 */
+.offline-pill{position:fixed;top:max(6px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:95;display:flex;align-items:center;gap:8px;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:600;color:var(--warn);white-space:nowrap}
+.offline-pill i{width:7px;height:7px;border-radius:50%;background:var(--warn)}
+.offline-pill[hidden]{display:none}
+body.offline .topbar{top:46px}
+/* 백업 권유(F9-3): 토스트 자리 위에 머무는 배너 */
+.notice{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;padding:8px 8px 8px 18px;border-radius:20px;font-size:13px;color:var(--text);max-width:560px;animation:rise .35s var(--ease)}
+.notice[hidden]{display:none}
+.notice span{flex:1 1 220px}
+.notice button{border:0;background:transparent;color:var(--gold-strong);font-weight:700;cursor:pointer;min-height:36px;padding:0 10px;white-space:nowrap;border-radius:999px}
+.notice button:hover{background:var(--panel-2)}
+.notice .later{color:var(--text-dim);font-weight:500}
+/* 목록 패널: 이름 목록 붙여 넣기(F9-5) */
+.paste-box{margin:0 0 10px;padding:4px 12px;border:1px solid var(--line-2);border-radius:14px;background:var(--panel-2)}
+.paste-box[open]{padding-bottom:10px}
+.paste-box summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-size:13px;font-weight:700;color:var(--gold)}
+.paste-box textarea{width:100%;margin-top:4px;font-size:13px}
+.paste-result{margin:8px 0;color:var(--text-dim);line-height:1.6}
+.paste-result:empty{display:none}
+.ok-text{color:var(--ok)}
+@media (max-width:720px){
+  body.offline{padding-top:36px}
+  body.offline .topbar{top:auto}
+  .notice{max-width:none}
+}

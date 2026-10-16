@@ -8,7 +8,7 @@ import { loadJSON } from '../data.js';
 import { countryList, placeInfo, placeMeta, findCity } from '../places.js';
 import { worldView } from '../map/world.js';
 import { addStar } from '../map/effects.js';
-import { activeModels, AIRPORTS, OUT_TOKENS } from '../ai/config.js';
+import { activeModels, AIRPORTS, OUT_TOKENS, WEB_SEARCH_USD, onlineSlug } from '../ai/config.js';
 import {
   historySummary, exclusions, buildMessages, SCHEMA, parseContent, validateResult, estimateTokens, costUSD, condKey,
   defaultConditions, INTERESTS, SCOPES,
@@ -75,13 +75,14 @@ function condChips(c) {
     ...c.interests.map(t => `<span class="chip on">${esc(t)}</span>`),
     c.onlyNew && c.scope !== 'korea' ? '<span class="chip on">안 가 본 나라만</span>' : '',
     `<span class="chip">${SCOPES[c.scope]}</span>`,
+    c.web ? '<span class="chip on">웹 검색</span>' : '',
   ].join('');
 }
 
 function fillForm() {
   const c = cond;
   $('acMonth').value = c.month; $('acDays').value = c.days; $('acParty').value = c.party; $('acBudget').value = c.budget;
-  $('acOrigin').value = c.origin; $('acOnlyNew').checked = c.onlyNew;
+  $('acOrigin').value = c.origin; $('acOnlyNew').checked = c.onlyNew; $('acWeb').checked = !!c.web;
   $('acCompanion').innerHTML = Object.entries(COMPANIONS).filter(([k]) => k !== 'business')
     .map(([k, v]) => `<button type="button" data-v="${k}" aria-pressed="${k === c.companion}">${v}</button>`).join('');
   $('acInterests').innerHTML = INTERESTS.map(t => `<button type="button" class="chip chip-btn${c.interests.includes(t) ? ' on' : ''}" data-v="${t}" aria-pressed="${c.interests.includes(t)}">${t}</button>`).join('');
@@ -93,7 +94,7 @@ function readForm() {
   const pressedV = id => $(id).querySelector('[aria-pressed="true"]')?.dataset.v;
   const c = {
     month: $('acMonth').value, days: +$('acDays').value, companion: pressedV('acCompanion') ?? 'family', party: +$('acParty').value,
-    budget: +$('acBudget').value, origin: $('acOrigin').value, onlyNew: $('acOnlyNew').checked, scope: pressedV('acScope') ?? 'world',
+    budget: +$('acBudget').value, origin: $('acOrigin').value, onlyNew: $('acOnlyNew').checked, scope: pressedV('acScope') ?? 'world', web: $('acWeb').checked,
     interests: [...$('acInterests').querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.v),
   };
   if (!/^\d{4}-\d{2}$/.test(c.month)) return { error: '여행 시기를 연·월로 골라 주세요(예: 2027-05).' };
@@ -114,10 +115,11 @@ function openReceipt() {
   const inTok = estimateTokens(messages.map(m => m.content).join('\n')) + estimateTokens(JSON.stringify(SCHEMA)) + 20;
   const picked = store.get(PICK_KEY, models().map(m => m.key));
   $('rcRows').innerHTML = models().map(m => {
-    const cost = m.price ? costUSD(m.price, inTok, OUT_TOKENS) : null;
+    const cost = m.price ? costUSD(m.price, inTok, OUT_TOKENS) + (cond.web ? WEB_SEARCH_USD : 0) : null;
     return `<tr><td><label class="row rc-model"><input type="checkbox" data-model="${m.key}" ${picked.includes(m.key) ? 'checked' : ''}> <span class="model ${m.key}"><i>${m.mono}</i>${esc(m.label)}</span></label></td>
       <td>${inTok.toLocaleString('ko-KR')}</td><td>${OUT_TOKENS.toLocaleString('ko-KR')}</td><td data-cost="${cost ?? ''}">${cost != null ? usdKrw(cost) : '단가 미확인'}</td></tr>`;
   }).join('');
+  $('rcWeb').hidden = !cond.web;
   updateReceipt();
   $('aiReceipt').hidden = false;
   $('rcGo').focus();
@@ -130,9 +132,11 @@ function updateReceipt() {
   $('rcCount').textContent = `합계 ${on.length}회`;
   $('rcTotal').textContent = usdKrw(total);
   const key = getKey();
-  $('rcError').innerHTML = !key ? '설정에서 OpenRouter API 키를 먼저 넣어 주세요. <button class="link-btn" type="button" id="rcSettings">설정 열기</button>'
+  const offline = !navigator.onLine;
+  $('rcError').innerHTML = offline ? '오프라인이에요. 인터넷에 연결된 뒤 다시 시도해 주세요.'
+    : !key ? '설정에서 OpenRouter API 키를 먼저 넣어 주세요. <button class="link-btn" type="button" id="rcSettings">설정 열기</button>'
     : !on.length ? '모델을 하나 이상 골라 주세요.' : '';
-  $('rcGo').disabled = !key || !on.length;
+  $('rcGo').disabled = offline || !key || !on.length;
 }
 
 function closeReceipt() { $('aiReceipt').hidden = true; }
@@ -141,7 +145,8 @@ function closeReceipt() { $('aiReceipt').hidden = true; }
 const sumUsage = (a, b) => ({ in: (a?.in ?? 0) + (b?.in ?? 0), out: (a?.out ?? 0) + (b?.out ?? 0), cost: a?.cost == null && b?.cost == null ? null : (a?.cost ?? 0) + (b?.cost ?? 0) });
 
 async function callModel(run, key, messages) {
-  const m = models().find(x => x.key === key);
+  const base = models().find(x => x.key === key);
+  const m = { ...base, slug: onlineSlug(base.slug, run.cond.web) };   // 웹 검색(F7-12)이면 :online
   run.models[key] = { slug: m.slug, label: m.label, status: 'loading' };
   render();
   const apiKey = getKey();
@@ -166,7 +171,7 @@ async function callModel(run, key, messages) {
   }
   const u = run.models[key].usage;
   if (!u) return null;
-  const cost = u.cost ?? (m.price ? costUSD(m.price, u.in, u.out) : 0);
+  const cost = u.cost ?? (m.price ? costUSD(m.price, u.in, u.out) + (run.cond.web ? WEB_SEARCH_USD : 0) : 0);
   return { id: newId('c'), at: new Date().toISOString(), runId: run.id, model: key, slug: m.slug, in: u.in, out: u.out, cost, estimated: u.cost == null };
 }
 
@@ -177,7 +182,7 @@ function tryParse(text) {
 async function run(keys) {
   const messages = promptFor(cond);
   const r = { id: newId('ai'), at: new Date().toISOString(), cond: { ...cond }, condKey: condKey(cond), order: keys,
-    models: Object.fromEntries(keys.map(k => [k, { slug: models().find(x => x.key === k).slug, label: models().find(x => x.key === k).label, status: 'loading' }])) };
+    models: Object.fromEntries(keys.map(k => [k, { slug: onlineSlug(models().find(x => x.key === k).slug, cond.web), label: models().find(x => x.key === k).label, status: 'loading' }])) };
   shown = r; selected = -1; tabOf.clear();
   const costs = (await Promise.all(keys.map(k => callModel(r, k, messages)))).filter(Boolean);
   saveAiRun(stripLive(r), costs);
@@ -272,6 +277,7 @@ const aiApp = () => ({
   onZoomStart: () => {},
   onBackground: () => select(-1),
   stars: () => [],
+  cities: () => [],   // 추천 핀만 보이도록 도시 핀은 그리지 않음
 });
 
 async function ensureMap() {

@@ -3,6 +3,7 @@
 import { particles } from '../map/effects.js';
 import { motionReduced } from '../settings.js';
 import { esc } from '../env.js';
+import { playChime } from './sound.js';
 
 const $ = id => document.getElementById(id);
 const TONES = { gold: ['#FFF1C9', '#E8C98A', '#9C7330'], silver: ['#E6E9F5', '#AEB5D4', '#5E6690'] };
@@ -26,6 +27,7 @@ export function celebrate(badge, desc) {
   returnFocus = document.activeElement;
   $('milestone').hidden = false;
   $('msClose').focus();
+  playChime();
   if (motionReduced()) return;
   const cv = document.createElement('canvas');
   cv.className = 'fx-canvas confetti';

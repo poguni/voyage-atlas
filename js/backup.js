@@ -35,6 +35,23 @@ export function parseBackup(text) {
   return migrate(obj.data);
 }
 
+// 백업 권유(F9-3): 마지막 백업(없으면 백업 후 첫 변경) 뒤 30일이 지났거나 변경이 20번 이상이면 권유합니다.
+// 바뀐 것이 없거나 [나중에]로 미뤄 둔 동안에는 보이지 않습니다.
+export const NUDGE_DAYS = 30, NUDGE_CHANGES = 20, SNOOZE_DAYS = 7;
+const DAY_MS = 864e5;
+
+/**
+ * @param o { count: 백업 후 변경 수, since: 백업 후 첫 변경 시각, last: 마지막 백업 시각, snooze: 다시 보일 시각, now }
+ * @returns null | { kind: 'never' | 'days' | 'changes', days, count }
+ */
+export function backupNudge({ count = 0, since = null, last = null, snooze = null, now = Date.now() }) {
+  if (!count || (snooze && now < Date.parse(snooze))) return null;
+  const from = Date.parse(last ?? since ?? '');
+  const days = Number.isFinite(from) ? Math.floor((now - from) / DAY_MS) : 0;
+  if (days < NUDGE_DAYS && count < NUDGE_CHANGES) return null;
+  return { kind: !last ? 'never' : days >= NUDGE_DAYS ? 'days' : 'changes', days, count };
+}
+
 const newer = (a, b) => ((b?.updatedAt ?? '') > (a?.updatedAt ?? '') ? b : a);
 const unionBy = (a, b, key) => {
   const m = new Map(a.map(x => [key(x), x]));
