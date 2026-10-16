@@ -129,7 +129,7 @@ td:first-child{white-space:nowrap}
   <main>
     <header class="hero">
       <div class="eyebrow">VOYAGE ATLAS · IMPLEMENTATION PLAN</div>
-      <h1>나의 여정 지도(Voyage Atlas)<br><span class="gold">구현 계획서</span></h1>
+      <h1>나의 여정 지도(Voyage Atlas)<br><span class="gold">구현 계획서</span></h1>
       <ol class="phases" aria-label="Phase 0부터 6까지의 단계"><li><span class="ph-num">0</span><span class="ph-name">기반과 지도 데이터</span><span class="ph-m">M1 준비</span></li><li><span class="ph-num">1</span><span class="ph-name">지도와 색칠</span><span class="ph-m">M1</span></li><li><span class="ph-num">2</span><span class="ph-name">기록·통계·위시</span><span class="ph-m">M2</span></li><li><span class="ph-num">3</span><span class="ph-name">공유 이미지</span><span class="ph-m">M3</span></li><li><span class="ph-num">4</span><span class="ph-name">AI 추천</span><span class="ph-m">M4</span></li><li><span class="ph-num">5</span><span class="ph-name">성취와 연출</span><span class="ph-m">M5 · P1</span></li><li><span class="ph-num">6</span><span class="ph-name">확장</span><span class="ph-m">M6 · P2</span></li></ol>
     </header>
     <div class="table-wrap meta"><table>
@@ -141,7 +141,7 @@ td:first-child{white-space:nowrap}
 </thead>
 <tbody><tr>
 <td>문서 버전</td>
-<td>v1.9</td>
+<td>v2.0</td>
 </tr>
 <tr>
 <td>작성일</td>
@@ -981,7 +981,7 @@ td:first-child{white-space:nowrap}
 <td>F1-9~F1-11</td>
 </tr>
 <tr>
-<td>5e 통계 확장</td>
+<td>5e 통계 확장 ✅</td>
 <td>월별 빈도, 이동 거리(&quot;지구 ○바퀴&quot;), 동행 비율, 위시 달성률</td>
 <td>F4-6~F4-8</td>
 </tr>
@@ -1138,6 +1138,43 @@ td:first-child{white-space:nowrap}
 <tr>
 <td>계획과 달라진 점</td>
 <td>① 시도 경계선은 <code>--foil-edge</code>가 금박 위에서 보이지 않아 어두운 선으로 ② 빠른 색칠을 켠 채 두 번 누르면 색칠이 켜졌다 꺼진 뒤 시군구로 바뀜(위쪽 전환 버튼 사용 권장) ③ 시군구 정복률(F4-4 P1)은 HUD에 아직 넣지 않음(5e 통계 확장 때 검토)</td>
+</tr>
+</tbody></table>
+</div><h3>5e 진행 결과 (2026-10-16 완료)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>이동 거리(F4-7)</td>
+<td>여행마다 홈 공항 → 경유지 순서 → 홈 공항의 대권 거리를 더함(좌표를 모르는 경유지는 건너뜀, 예정 여행 제외). 통계 4번째 KPI를 시안 04대로 &quot;1.2바퀴 · 추정 이동 거리 46,700km · 여행 5번&quot;으로 바꿈(100km 단위). 기간(연도)을 고르면 그해 여행만</td>
+</tr>
+<tr>
+<td>지구본 FLIGHT LOG(시안 03)</td>
+<td>지구본 보기에서 HUD가 &quot;FLIGHT LOG · ○바퀴(km) · 인천에서 출발한 ○곳의 비행 궤적 · 여행 횟수 · 방문 도시&quot;로 바뀜(5b에서 미룬 것). 홈 공항 설정을 따름</td>
+</tr>
+<tr>
+<td>월별 여행 빈도(F4-6)</td>
+<td>통계 화면에 1~12월 막대(출발 월 기준, 가장 많이 떠난 달은 금색 + 라벨). 기간 선택 반영</td>
+</tr>
+<tr>
+<td>동행 비율·위시 달성률(F4-8)</td>
+<td>&quot;누구와 떠났나&quot; 카드: 동행 유형별 색 막대 + 비율·횟수(기록 없음은 맨 뒤, 기간 선택 반영), 아래에 위시 달성률(전체 기간, 금색 막대)</td>
+</tr>
+<tr>
+<td>테스트</td>
+<td>79개 통과(이동 거리·합계·월별·동행 비율 3개 추가)</td>
+</tr>
+<tr>
+<td>브라우저 확인</td>
+<td>도쿄·교토, 파리·로마, 뉴욕, 도쿄 출장, 부산 여행: 46,700km(1.2바퀴), 2025년만 3,100km, 10월 2번이 금색, 동행 20%씩 + 기록 없음, 위시 3곳 중 1곳 33%, 지구본 FLIGHT LOG &quot;인천에서 출발한 5곳&quot;. 1440·390px, 콘솔 오류 0</td>
+</tr>
+<tr>
+<td>계획과 달라진 점</td>
+<td>① 국내 여행도 PRD 공식대로 홈 공항에서 출발·도착으로 계산(연대기 경로 지도는 국내 여행에 공항을 그리지 않음) ② F4-6의 &quot;연도별 방문국 막대&quot;는 넣지 않음(연도별 막대는 여행 일수 그대로, 연도 선택 시 방문국은 KPI에 보임) ③ 시군구 정복률(F4-4 P1)은 이번에도 넣지 않음</td>
 </tr>
 </tbody></table>
 </div><p>커밋은 묶음마다 하나씩 권합니다. 예: <code>feat(badges): 마일스톤 배지와 축하 연출</code>, <code>feat(map): 2D 지구본과 투영 전환</code>, <code>feat(pwa): 서비스 워커 오프라인 캐시</code>. 모두 끝나면 태그 <code>v1.0.0</code>.</p>

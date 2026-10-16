@@ -67,7 +67,7 @@ VoyageAtlas/
 ├─ js/
 │  ├─ main.js          진입점: 화면 이동(#home·#trips·#wish·#stats), 보기 전환, 장소 클릭, HUD·검색·패널 연결
 │  ├─ store.js         상태 저장소(구독 + IndexedDB 자동 저장, 실행 취소용 되돌리기 함수)
-│  ├─ stats.js         방문 횟수·국가·한국 통계(순수 함수, 테스트 대상)
+│  ├─ stats.js         방문 횟수·국가·한국·이동 거리·월별·동행 통계(순수 함수, 테스트 대상)
 │  ├─ backup.js        데이터 기본값, 마이그레이션, 백업 파일 만들기·읽기·합치기(순수 함수)
 │  ├─ settings.js      설정(테마, 애니메이션 줄이기, 경유 포함)
 │  ├─ places.js        장소 ID → 이름·국기·좌표, 검색 항목(도시는 처음 검색할 때 불러옴)
@@ -80,7 +80,7 @@ VoyageAtlas/
 │  ├─ screens/         trips.js(연대기), wish.js(위시리스트), ai.js(AI 추천), stats-view.js(통계), share.js(공유 스튜디오)
 │  ├─ share/           model.js(포스터 숫자·배치), poster.js(Canvas 그리기)
 │  ├─ ai/              config.js(모델·공항 기본값), prompt.js(이력 요약·프롬프트·스키마·검증), merge.js(병합·합의·좌표 보정), openrouter.js(API 호출·키 보관)
-│  └─ ui/              popover, hud, search, toast, panel, list-panel, settings-panel, ai-settings(AI 키·모델·홈 공항·환율), milestone(배지 코인·축하 창), timelapse(전체 연대기 재생), legend(범례·색칠 기준), trip-form, wish-form, place-detail, dream, flag(국기 이미지), tooltip, sky
+│  └─ ui/              popover, hud(세계·한국·지구본 FLIGHT LOG), search, toast, panel, list-panel, settings-panel, ai-settings(AI 키·모델·홈 공항·환율), milestone(배지 코인·축하 창), timelapse(전체 연대기 재생), legend(범례·색칠 기준), trip-form, wish-form, place-detail, dream, flag(국기 이미지), tooltip, sky
 ├─ data/               지도·국가 데이터(전처리 결과)
 ├─ assets/flags/       국기 SVG
 ├─ tools/              데이터 전처리 스크립트
