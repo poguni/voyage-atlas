@@ -50,3 +50,18 @@ export function renderKoreaHud(k, nameOf, anim, reduced) {
   $('krList').innerHTML = k.ranking.slice(0, 5).map((r, i) =>
     `<li><span class="rk">${i + 1}</span><span class="dot" style="background:var(--v${Math.min(4, r.count)})"></span><span>${esc(nameOf(r.code))}</span><b>${r.count}회</b></li>`).join('');
 }
+
+/**
+ * 지구본 HUD(DESIGN.md 8장 03 FLIGHT LOG): 지구 ○바퀴(km) → 설명 → 여행 횟수·방문 도시
+ * @param d  { laps, kmText, home(공항 이름), places(다녀온 해외 경유지 수), trips, cities }
+ */
+export function renderGlobeHud(d, anim, reduced) {
+  const lapsFmt = v => (v >= 10 ? Math.round(v).toLocaleString('ko-KR') : v.toFixed(1));
+  countTo($('glLaps'), d.laps, lapsFmt, !anim || reduced);
+  $('glKm').textContent = `${d.kmText} km`;
+  $('glDesc').textContent = d.places
+    ? `${d.home}에서 출발한 ${d.places}곳의 비행 궤적이에요. 지구본을 끌어서 돌려 보세요.`
+    : '해외여행을 기록하면 비행 궤적과 이동 거리가 보여요.';
+  countTo($('glTrips'), d.trips, undefined, !anim || reduced);
+  countTo($('glCities'), d.cities, undefined, !anim || reduced);
+}

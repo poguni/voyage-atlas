@@ -19,7 +19,7 @@ import { scratch, particles } from './map/effects.js';
 import { drawSky } from './ui/sky.js';
 import { toast } from './ui/toast.js';
 import { initPopover, openPopover, closePopover, popoverTarget } from './ui/popover.js';
-import { renderWorldHud, renderKoreaHud } from './ui/hud.js';
+import { renderWorldHud, renderKoreaHud, renderGlobeHud } from './ui/hud.js';
 import { attachCombobox } from './ui/search.js';
 import { initPanels, openPanel, closePanel } from './ui/panel.js';
 import { initListPanel, renderListPanel } from './ui/list-panel.js';
@@ -29,8 +29,9 @@ import { initWishForm, openWishForm } from './ui/wish-form.js';
 import { initPlaceDetail, openPlaceDetail, renderPlaceDetail, placeDetailOpen } from './ui/place-detail.js';
 import { renderDream } from './ui/dream.js';
 import { initTrips, renderTrips, selectTrip } from './screens/trips.js';
+import { HOME_AIRPORT } from './map/mini.js';
 import { initWish, renderWish } from './screens/wish.js';
-import { initStats, renderStats } from './screens/stats-view.js';
+import { initStats, renderStats, travelDistance, fmtKm } from './screens/stats-view.js';
 import { initShare, renderShare } from './screens/share.js';
 import { initMilestone, celebrate } from './ui/milestone.js';
 import { initTimelapse, startTimelapse, stopTimelapse, frameState } from './ui/timelapse.js';
@@ -206,6 +207,12 @@ function renderHuds(anim) {
     years: firstYear ? [firstYear, +today.slice(0, 4)] : null,
   });
   renderKoreaHud(ks, sidoName, anim, motionReduced());
+  const dist = travelDistance(s);
+  renderGlobeHud({
+    laps: dist.laps, kmText: fmtKm(dist.km), home: HOME_AIRPORT.name, places: dist.overseasPlaces,
+    trips: s.trips.filter(t => tripStarted(t, today)).length,
+    cities: visitedCities(s, 'city', today).length + visitedCities(s, 'kr-sigungu', today).length,
+  }, anim, motionReduced());
 }
 
 // ---------- 마일스톤(PRD F5-1·F5-2) ----------
@@ -298,8 +305,8 @@ async function show(name) {
   closePopover();
   box.parentElement.dataset.view = name;   // 휴대폰에서 보기별 지도 높이(세계는 가로로 긴 비율)
   document.querySelectorAll('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === name)));
-  const hudView = name === 'korea' ? 'korea' : 'world';   // 지구본은 세계 HUD·범례
-  for (const [id, v] of [['legendWorld', 'world'], ['legendKorea', 'korea'], ['hudWorld', 'world'], ['hudKorea', 'korea']]) $(id).hidden = hudView !== v;
+  // 지구본은 FLIGHT LOG HUD + 세계 범례
+  for (const [id, v] of [['legendWorld', 'world globe'], ['legendKorea', 'korea'], ['hudWorld', 'world'], ['hudKorea', 'korea'], ['hudGlobe', 'globe']]) $(id).hidden = !v.split(' ').includes(name);
   $('spinWrap').hidden = name !== 'globe';
   $('unitSeg').hidden = name !== 'korea';
   document.querySelectorAll('#unitSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === krUnit)));

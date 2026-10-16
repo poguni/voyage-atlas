@@ -669,3 +669,14 @@ select.input{cursor:pointer}
   .receipt table{font-size:12px}
   .rc-model .model{font-size:12px}
 }
+
+/* ---------- 통계 확장(Phase 5e, F4-6~F4-8) ---------- */
+.comp-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:12px}
+.comp-list li{display:grid;grid-template-columns:72px 1fr 44px 40px;gap:12px;align-items:center;font-size:14px}
+.comp-list li.empty-li{display:block}
+.comp-list .progress{height:8px}
+.comp-list b{text-align:right;font-size:13px}
+.comp-list small{text-align:right}
+.wish-rate{margin-top:20px;padding-top:16px;border-top:1px solid var(--line-2);display:grid;gap:8px;font-size:14px}
+.wish-rate b{font-size:20px}
+.wish-bar > span{background:var(--wish)}

@@ -136,6 +136,17 @@
       </div>
     </aside>
 
+    <!-- 통계 HUD: 지구본(DESIGN.md 8장 03) -->
+    <aside class="overlay glass hud" id="hudGlobe" aria-label="여정 요약" hidden>
+      <div class="eyebrow">Flight Log</div>
+      <div class="big" style="margin-top:10px"><span class="num" id="glLaps">0</span><div style="padding-bottom:10px"><div class="unit">바퀴</div><div class="dim mono" style="font-size:12px" id="glKm">0 km</div></div></div>
+      <p class="dim hud-next" id="glDesc"></p>
+      <div class="stat-mini">
+        <div><span class="num" id="glTrips">0</span><small>여행 횟수</small></div>
+        <div><span class="num" id="glCities">0</span><small>방문 도시</small></div>
+      </div>
+    </aside>
+
     <!-- 통계 HUD: 대한민국(DESIGN.md 8장 02) -->
     <aside class="overlay glass hud" id="hudKorea" aria-label="한국 정복률" hidden>
       <div class="eyebrow">Korea Conquest</div>
@@ -239,6 +250,13 @@
     <div class="grid-2">
       <div class="card"><div class="row"><h2>대륙별 비율</h2><span class="spacer"></span><span class="faint mono small">방문국 기준</span></div><div id="donut" class="chart"></div></div>
       <div class="card"><div class="row"><h2>연도별 여행 일수</h2><span class="spacer"></span><span class="faint mono small" id="barsRange"></span></div><div id="bars" class="chart"></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="row"><h2>월별 여행 빈도</h2><span class="spacer"></span><span class="faint mono small" id="monthsNote"></span></div><div id="months" class="chart"></div></div>
+      <div class="card"><div class="row"><h2>누구와 떠났나</h2><span class="spacer"></span><span class="faint mono small" id="compNote"></span></div>
+        <ul class="comp-list" id="statsComp"></ul>
+        <div class="wish-rate" id="wishRate"></div>
+      </div>
     </div>
     <div class="grid-2">
       <div class="card"><h2>가장 많이 간 나라</h2><ol class="top5 top-flags" id="statsTop"></ol></div>

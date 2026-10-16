@@ -1,6 +1,7 @@
 // 방문·통계 계산 순수 함수(DOM·D3 없이 Node 테스트 가능, PRD 10.3절)
 // state: { places: { [placeId]: { status } }, trips: [...], wishlist: [...] }
 // 장소 ID: country:<ISO 숫자 또는 x-ID>, kr-sido:<17칸 코드>, (Phase 2) city:<GeoNames ID>
+import { distKm } from './ai/merge.js';
 
 export const KOREA = '410';
 export const KR_SIDO = ['11', '26', '27', '28', '29', '30', '31', '36', '41', '43', '44', '46', '47', '48', '50', '51', '52'];
@@ -231,6 +232,57 @@ export function placeVisits(state, placeId, today = todayStr()) {
     .sort((a, b) => (b.start ?? '').localeCompare(a.start ?? ''));
   const dated = trips.filter(t => t.start).map(t => t.start).sort();
   return { trips, first: dated[0] ?? null, last: dated.at(-1) ?? null };
+}
+
+// ---------- 통계 확장(F4-6~F4-8) ----------
+export const EARTH_KM = 40075;   // 적도 둘레(지구 한 바퀴)
+
+const startedIn = (state, today, year) =>
+  (state.trips ?? []).filter(t => tripStarted(t, today) && (year == null || tripYear(t) === year));
+
+// 여행 한 번의 이동 거리: 홈 공항 → 경유지 순서 → 홈 공항의 대권 거리 합(PRD 10.3). 좌표를 모르는 경유지는 건너뜀
+export function tripDistanceKm(trip, home, llOf) {
+  const pts = (trip.stops ?? []).map(s => llOf(s.placeId)).filter(Boolean);
+  if (!pts.length) return 0;
+  const seq = [home, ...pts, home];
+  let km = 0;
+  for (let i = 1; i < seq.length; i++) km += distKm(seq[i - 1], seq[i]);
+  return km;
+}
+
+/**
+ * 이동 거리 합계(F4-7): { km, laps(지구 몇 바퀴), trips(거리를 잰 여행 수), overseasPlaces(다녀온 해외 경유지 수) }
+ * @param home  홈 공항 [경도, 위도]
+ * @param llOf  placeId → [경도, 위도] | null
+ */
+export function distanceSummary(state, { home, llOf, today = todayStr(), year = null }) {
+  const places = state.places ?? {};
+  let km = 0, trips = 0;
+  const overseas = new Set();
+  for (const t of startedIn(state, today, year)) {
+    const d = tripDistanceKm(t, home, llOf);
+    if (d) { km += d; trips++; }
+    for (const s of t.stops ?? []) if (countryOf(s.placeId, places) !== KOREA) overseas.add(s.placeId);
+  }
+  return { km, laps: km / EARTH_KM, trips, overseasPlaces: overseas.size };
+}
+
+// 월별 여행 빈도(F4-6): 1~12월에 떠난 여행 수(출발 월을 아는 여행만)
+export function monthlyTrips(state, { today = todayStr(), year = null } = {}) {
+  const out = Array(12).fill(0);
+  for (const t of startedIn(state, today, year)) if (t.start && t.start.length >= 7) out[+t.start.slice(5, 7) - 1]++;
+  return out;
+}
+
+// 동행 유형별 비율(F4-8): [{ type(COMPANIONS 키 | 'none'), count, pct }] 많은 순, 기록 없음은 맨 뒤
+export function companionShare(state, { today = todayStr(), year = null } = {}) {
+  const trips = startedIn(state, today, year);
+  const n = {};
+  for (const t of trips) { const k = COMPANIONS[t.companion] ? t.companion : 'none'; n[k] = (n[k] ?? 0) + 1; }
+  const pct = c => Math.round(c / trips.length * 100);
+  const rows = Object.keys(COMPANIONS).filter(k => n[k]).map(type => ({ type, count: n[type], pct: pct(n[type]) })).sort((a, b) => b.count - a.count);
+  if (n.none) rows.push({ type: 'none', count: n.none, pct: pct(n.none) });
+  return rows;
 }
 
 // ---------- 지도 확장(F1-10·F1-11) ----------
