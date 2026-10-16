@@ -78,7 +78,7 @@ VoyageAtlas/
 │  ├─ data.js          data/*.json 불러오기, 국가 사전
 │  ├─ map/             engine.js(지도 엔진), world.js(세계), korea.js(대한민국 시도·시군구), pins.js(도시 핀), globe.js(지구본·전환 연출), effects.js(금박 긁기·파티클·별), mini.js(경로·장소·별 지도)
 │  ├─ screens/         trips.js(연대기), wish.js(위시리스트), ai.js(AI 추천), stats-view.js(통계), share.js(공유 스튜디오)
-│  ├─ share/           model.js(포스터 숫자·배치), poster.js(Canvas 그리기)
+│  ├─ share/           model.js(포스터 숫자·배치: 월드·한국·올해의 여정·여행 카드, A3), poster.js(Canvas 그리기·경로)
 │  ├─ ai/              config.js(모델·공항 기본값), prompt.js(이력 요약·프롬프트·스키마·검증), merge.js(병합·합의·좌표 보정), openrouter.js(API 호출·키 보관)
 │  └─ ui/              popover, hud(세계·한국·지구본 FLIGHT LOG), search, toast, panel, list-panel, settings-panel, ai-settings(AI 키·모델·홈 공항·환율), milestone(배지 코인·축하 창), timelapse(전체 연대기 재생), legend(범례·색칠 기준), trip-form, wish-form, place-detail, dream, flag(국기 이미지), tooltip, sky
 ├─ data/               지도·국가 데이터(전처리 결과)
