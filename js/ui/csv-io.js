@@ -1,8 +1,10 @@
-// CSV 내보내기(설정 패널, F9-4)와 이름 목록 붙여 넣기로 한꺼번에 색칠(목록 패널, F9-5)
+// CSV 내보내기(설정 패널, F9-4), 이름 목록 붙여 넣기로 한꺼번에 색칠(목록 패널, F9-5), 트립픽 연동 JSON(F9-6, F6-8)
 import { getState, setManyStatus } from '../store.js';
 import { countryList, sidoList, placeInfo } from '../places.js';
 import { tripsCSV, placesCSV, matchPlaces } from '../csv.js';
 import { placeStatus, KR_SIDO } from '../stats.js';
+import { tripPickExport } from '../trippick.js';
+import { settings } from '../settings.js';
 import { saveFile, dateStamp } from './settings-panel.js';
 import { toast } from './toast.js';
 import { esc } from '../env.js';
@@ -16,9 +18,26 @@ export function exportCSV(kind) {
     : placesCSV(s, { countries: countryList(), sidoCodes: KR_SIDO, infoOf: placeInfo });
   const name = `voyage-atlas-${kind === 'trips' ? 'trips' : 'places'}-${dateStamp()}.csv`;
   // 엑셀에서 한글이 깨지지 않게 BOM을 붙임
-  saveFile(new Blob(['﻿', text], { type: 'text/csv;charset=utf-8' }), name);
+  saveFile(new Blob([String.fromCharCode(0xfeff), text], { type: 'text/csv;charset=utf-8' }), name);
   const rows = text.trim().split('\r\n').length - 1;
   toast(`⤓ ${kind === 'trips' ? '여행' : '방문'} 목록 ${rows}줄을 CSV로 저장했어요 <span class="mono">${esc(name)}</span>`);
+}
+
+// ---------- 트립픽 연동 ----------
+const tripPick = () => tripPickExport(getState(), { countries: countryList(), sidoCodes: KR_SIDO, infoOf: placeInfo, homeAirport: settings.homeAirport });
+
+export function exportTripPick() {
+  const data = tripPick();
+  const name = `voyage-atlas-trippick-${dateStamp()}.json`;
+  saveFile(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), name);
+  toast(`⤓ 트립픽용 파일을 저장했어요(나라 ${data.visited.countries.length}곳 · 후보 ${data.candidates.length}곳) <span class="mono">${esc(name)}</span>`);
+}
+
+async function copyExclude(kind) {
+  const text = tripPick().excludeText[kind];
+  if (!text) return toast(kind === 'overseas' ? '아직 다녀온 해외 나라가 없어요.' : '아직 다녀온 시도가 없어요.');
+  try { await navigator.clipboard.writeText(text); toast(`트립픽 '추천 제외 조건'에 붙여 넣으세요 <span class="mono">${text.length}자</span>`); }
+  catch { toast(`복사하지 못했어요: ${esc(text)}`); }
 }
 
 function preview() {
@@ -50,6 +69,9 @@ function apply() {
 export function initCsvIO() {
   $('csvTrips').addEventListener('click', () => exportCSV('trips'));
   $('csvPlaces').addEventListener('click', () => exportCSV('places'));
+  $('tpExport').addEventListener('click', exportTripPick);
+  $('tpCopyAbroad').addEventListener('click', () => copyExclude('overseas'));
+  $('tpCopyKorea').addEventListener('click', () => copyExclude('domestic'));
   let t = null;
   $('pasteText').addEventListener('input', () => { clearTimeout(t); t = setTimeout(preview, 200); });
   $('pasteApply').addEventListener('click', apply);

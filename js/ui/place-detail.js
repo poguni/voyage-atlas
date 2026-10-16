@@ -1,5 +1,5 @@
 // 장소 상세 패널(DESIGN.md 9장, PRD F2-5, F2-6)
-// 국기 56px + 이름 → 방문·첫/최근 방문 태그 → 작은 지도(다녀온 도시 점) → 방문 기록 목록 → 도시 칩 → 메모 → 버튼
+// 국기 56px + 이름 → 방문·첫/최근 방문 태그 → 대표 사진(F2-10) → 작은 지도(다녀온 도시 점) → 방문 기록 목록 → 도시 칩 → 메모 → 버튼
 import { getState, setPlaceStatus, setPlaceNote, deleteWish } from '../store.js';
 import { visitCount, placeStatus, placeVisits, isWished, countryOf, sidoOf, isCountry, isSido, todayStr } from '../stats.js';
 import { placeInfo, placeMeta } from '../places.js';
@@ -9,6 +9,7 @@ import { flagHTML } from './flag.js';
 import { openPanel, isPanelOpen } from './panel.js';
 import { toast } from './toast.js';
 import { esc, josa } from '../env.js';
+import { photoURL, setPhoto, deletePhoto, putPhoto } from '../photos.js';
 
 const $ = id => document.getElementById(id);
 let current = null;    // 열린 장소 ID
@@ -35,12 +36,28 @@ export function initPlaceDetail(c) {
         const undo = setPlaceStatus(current, 'visited', { meta: placeMeta(current) });
         return toast(`✦ <b>${esc(name)}</b>${josa(name, '을', '를')} 방문함으로 표시했어요`, { label: '실행 취소', fn: undo });
       }
+      case 'photo': return $('placePhotoFile').click();
+      case 'unphoto': {
+        const id = current;
+        return deletePhoto(id).then(prev => toast(`<b>${esc(name)}</b>의 사진을 지웠어요`, { label: '실행 취소', fn: () => putPhoto(id, prev) }));
+      }
       case 'clear': {
         const undo = setPlaceStatus(current, null);
         return toast(`<b>${esc(name)}</b>의 방문 표시를 지웠어요`, { label: '실행 취소', fn: undo });
       }
     }
   });
+  // 대표 사진: 고른 파일을 줄여 기기 안에 저장(이전 사진은 실행 취소로 되돌림)
+  $('placePhotoFile').addEventListener('change', async e => {
+    const file = e.target.files?.[0], id = current;
+    e.target.value = '';
+    if (!file || !id) return;
+    try {
+      const prev = await setPhoto(id, file);
+      toast(`✦ <b>${esc(placeInfo(id).name)}</b>의 대표 사진을 ${prev ? '바꿨어요' : '넣었어요'}`, { label: '실행 취소', fn: () => putPhoto(id, prev) });
+    } catch (err) { console.error(err); toast('사진을 열지 못했어요. JPG·PNG 사진으로 다시 시도해 주세요.'); }
+  });
+  document.addEventListener('va-photos', renderPhoto);
   // 메모는 입력이 멈추면 저장
   $('placeBody').addEventListener('input', e => {
     if (e.target.id !== 'placeNote') return;
@@ -89,6 +106,7 @@ export function renderPlaceDetail() {
     <div class="pd-head">${flagHTML(p.iso2, p.name, 56)}<div>
       <h3 class="h-display pd-name">${esc(p.name)}</h3><div class="dim pd-sub">${esc([p.en !== p.name ? p.en : '', p.sub].filter(Boolean).join(' · '))}</div></div></div>
     <div class="row pd-tags">${tags}</div>
+    <div class="pd-photo" id="pdPhoto"></div>
     <div class="pd-map" id="placeMap"></div>
     ${parent ? `<p class="pd-parent">속한 곳: <button type="button" class="link-row" data-place="${esc(parent)}">${esc(placeInfo(parent).name)} →</button></p>` : ''}
     <section><h4>방문 기록</h4>${v.trips.length
@@ -102,10 +120,25 @@ export function renderPlaceDetail() {
       ${status !== 'visited' ? '<button class="btn" type="button" data-act="visit">✦ 방문함으로 표시</button>' : simple ? '<button class="btn btn-ghost" type="button" data-act="clear">방문 표시 지우기</button>' : ''}
     </div>`;
 
+  renderPhoto();
   const cityDots = cities.map(id => ({ ll: placeInfo(id).ll, name: placeInfo(id).name })).filter(c => c.ll);
   requestAnimationFrame(() => {
     const el = $('placeMap');
     if (el) drawPlaceMap(el, current, { classFor: ctx.classFor, cities: cityDots }).catch(err => console.error(err));
+  });
+}
+
+// 대표 사진 칸: 있으면 사진 + [바꾸기] [지우기], 없으면 [＋ 대표 사진 넣기]
+function renderPhoto() {
+  const id = current;
+  if (!id || !$('pdPhoto')) return;
+  photoURL(id).then(url => {
+    const el = $('pdPhoto');
+    if (!el || id !== current) return;
+    const name = esc(placeInfo(id).name);
+    el.innerHTML = url
+      ? `<img src="${url}" alt="${name} 대표 사진"><div class="pd-photo-acts"><button class="btn btn-sm" type="button" data-act="photo">사진 바꾸기</button><button class="btn btn-sm btn-ghost" type="button" data-act="unphoto">지우기</button></div>`
+      : '<button class="pd-photo-add" type="button" data-act="photo"><b>＋ 대표 사진 넣기</b><small>사진은 줄여서 이 기기에만 저장돼요</small></button>';
   });
 }
 

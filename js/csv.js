@@ -13,7 +13,7 @@ export const toCSV = rows => rows.map(r => r.map(cell).join(',')).join('\r\n') +
 
 // 따옴표·줄바꿈을 지원하는 CSV 읽기. 탭이 있으면 탭으로 나눕니다(엑셀에서 복사해 붙여 넣은 경우).
 export function parseCSV(text) {
-  const src = String(text ?? '').replace(/^﻿/, '');
+  const src = String(text ?? '').replace(/^\u{feff}/u, '');
   const sep = src.includes('\t') ? '\t' : ',';
   const rows = [];
   let row = [], cur = '', q = false;

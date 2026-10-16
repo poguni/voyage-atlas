@@ -122,7 +122,13 @@ function drawMap(ctx, model, geo, L, T) {
   for (const f of geo.features) {
     const lv = lvOf(f);
     ctx.beginPath(); path(f);
-    ctx.fillStyle = lv ? T.lv[lv - 1] : land; ctx.fill(); ctx.stroke();
+    // 위시 보드: 꿈꾸는 곳이 있는 나라만 금박 그대로 + 별빛, 나머지 땅은 흐리게
+    const dream = model.wishLands?.has(f.id);
+    ctx.globalAlpha = model.wishLands && !lv && !dream ? 0.35 : 1;
+    ctx.fillStyle = lv ? T.lv[lv - 1] : land; ctx.fill();
+    if (dream) { ctx.fillStyle = T.wish; ctx.globalAlpha = 0.28; ctx.fill(); }
+    ctx.globalAlpha = 1;
+    ctx.stroke();
   }
 
   // 지도에서 너무 작은 나라(싱가포르 등)는 방문했을 때 원으로 표시
@@ -171,6 +177,26 @@ function drawMap(ctx, model, geo, L, T) {
     ctx.save(); ctx.translate(p[0], p[1]); ctx.scale(0.9 * s, 0.9 * s);
     ctx.fillStyle = T.wish; ctx.fill(STAR);
     ctx.restore();
+  }
+  if (model.stars.some(w => w.label)) labelStars(ctx, model.stars, proj, L, T);
+}
+
+// 위시 보드: 별 옆에 번호 + 이름(지도 오른쪽 절반은 왼쪽에, 겹치면 번호만)
+function labelStars(ctx, stars, proj, L, T) {
+  const { s } = L, [[bx0], [bx1]] = L.mapBox, drawn = [];
+  const box = (x, y, w, left) => [left ? x - w : x, y - 22 * s, left ? x : x + w, y + 6 * s];
+  const hit = r => drawn.some(d => r[0] < d[2] && d[0] < r[2] && r[1] < d[3] && d[1] < r[3]);
+  ctx.font = `700 ${22 * s}px ${S}`; ctx.lineJoin = 'round';
+  for (const w of stars) {
+    const p = w.label && proj(w.ll);
+    if (!p) continue;
+    const left = p[0] > (bx0 + bx1) / 2, tx = left ? p[0] - 16 * s : p[0] + 16 * s, ty = p[1] + 8 * s;
+    let str = w.label, r = box(tx, ty, ctx.measureText(str).width, left);
+    if (hit(r)) { str = w.label.split(' ')[0]; r = box(tx, ty, ctx.measureText(str).width, left); if (hit(r)) continue; }
+    drawn.push(r);
+    ctx.textAlign = left ? 'right' : 'left';
+    ctx.lineWidth = 6 * s; ctx.strokeStyle = T.bg1; ctx.strokeText(str, tx, ty);
+    ctx.fillStyle = T.text; ctx.fillText(str, tx, ty);
   }
 }
 

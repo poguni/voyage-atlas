@@ -89,7 +89,7 @@
       <!-- 장소 팝오버(DESIGN.md 6.4) -->
       <div class="popover glass" id="popover" hidden role="dialog" aria-labelledby="popName">
         <button class="pop-close" type="button" id="popClose" aria-label="닫기"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
-        <div class="row" style="gap:12px;flex-wrap:nowrap"><span id="popFlag"></span><div><div class="pop-name" id="popName"></div><div class="dim" style="font-size:12px" id="popMeta"></div></div></div>
+        <div class="row" style="gap:12px;flex-wrap:nowrap"><span id="popFlag"></span><div><div class="pop-name" id="popName"></div><div class="dim" style="font-size:12px" id="popMeta"></div></div><img class="pop-photo" id="popPhoto" alt="" hidden></div>
         <p class="dim" style="font-size:13px;margin:12px 0 0" id="popDesc"></p>
         <div class="acts">
           <button class="btn btn-primary" type="button" id="popMain"></button>
@@ -114,6 +114,7 @@
         <button type="button" data-unit="sigungu" aria-pressed="false">시군구</button>
       </div>
       <label class="switch spin-toggle" id="spinWrap" hidden><input type="checkbox" id="spinToggle" checked> 자전</label>
+      <button class="btn btn-sm cinema-btn" type="button" id="cinemaBtn" hidden title="3D 시네마틱 지구본(처음 열 때 약 1.9MB를 받아요)">✦ 3D</button>
       <div class="search" role="search">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <input id="searchInput" type="search" placeholder="나라·도시 검색 (초성 ㅍㄹㅅ 가능)" autocomplete="off" spellcheck="false"
@@ -318,7 +319,7 @@
         <button type="button" aria-pressed="false" data-tpl="korea"><span class="thumb thumb-korea"></span><span><b>대한민국 정복 지도</b><br><small class="dim">시도 정복률 · 독도 포함</small></span></button>
         <button type="button" aria-pressed="false" data-tpl="year"><span class="thumb thumb-year"></span><span><b>올해의 여정</b><br><small class="dim">연말 결산 · 새로 간 나라</small></span></button>
         <button type="button" aria-pressed="false" data-tpl="trip"><span class="thumb thumb-trip"></span><span><b>여행 카드</b><br><small class="dim">여행 1개의 경로 지도</small></span></button>
-        <button type="button" disabled><span class="thumb"></span><span><b>위시 보드</b> <span class="tag">준비 중</span><br><small class="dim">꿈꾸는 곳 별 지도</small></span></button>
+        <button type="button" aria-pressed="false" data-tpl="wish"><span class="thumb thumb-wish"></span><span><b>위시 보드</b><br><small class="dim">꿈꾸는 곳 별 지도</small></span></button>
       </div>
       <div class="poster-stage"><canvas id="shCanvas" role="img" aria-label="공유 포스터 미리 보기"></canvas></div>
       <div class="card opts">
@@ -395,6 +396,7 @@
     <section class="set-card gold">
       <h3>백업</h3>
       <p class="dim set-note">기록은 이 브라우저에만 저장돼요. 브라우저 데이터를 지우면 함께 사라지니 가끔 백업해 두세요.</p>
+      <div class="set-row"><label class="switch"><input type="checkbox" id="backupPhotos" checked> 대표 사진 포함</label></div>
       <button class="btn btn-primary" type="button" id="backupBtn">⤓ JSON 백업</button>
       <p class="faint set-note" id="lastBackup"></p>
     </section>
@@ -413,6 +415,13 @@
       <button class="btn btn-sm" type="button" id="csvPaste">이름 목록으로 한꺼번에 색칠</button>
     </section>
     <section class="set-card">
+      <h3>트립픽 연동</h3>
+      <p class="faint set-note">다녀온 나라·시도·도시와 위시리스트(트립픽 후보 형식)를 JSON으로 저장해요. 트립픽에서 "이미 가 본 곳 제외"와 후보 담기에 쓰세요.</p>
+      <button class="btn btn-sm" type="button" id="tpExport">⤓ 트립픽용 JSON</button>
+      <p class="faint set-note">트립픽의 '추천 제외 조건' 칸(200자)에 붙여 넣을 문장을 복사해요.</p>
+      <div class="row"><button class="btn btn-sm btn-ghost" type="button" id="tpCopyAbroad">해외: 가 본 나라 복사</button><button class="btn btn-sm btn-ghost" type="button" id="tpCopyKorea">국내: 가 본 시도 복사</button></div>
+    </section>
+    <section class="set-card">
       <h3>저장 공간</h3>
       <div class="progress storage"><span id="storageBar" style="width:1%"></span></div>
       <p class="faint set-note" id="storageInfo"></p>
@@ -421,7 +430,7 @@
       <h3>데이터 초기화</h3>
       <button class="btn" type="button" id="resetBtn">모든 기록 지우기</button>
       <div id="resetConfirm" hidden>
-        <p class="set-note warn-text">정말 지울까요? 방문·위시 기록이 모두 사라지고 되돌릴 수 없어요. 먼저 백업해 두기를 권해요.</p>
+        <p class="set-note warn-text">정말 지울까요? 방문·위시 기록과 대표 사진이 모두 사라지고 되돌릴 수 없어요. 먼저 백업해 두기를 권해요.</p>
         <div class="row"><button class="btn btn-ghost" type="button" id="resetNo">취소</button><button class="btn danger-btn" type="button" id="resetYes">지우기 확인</button></div>
       </div>
     </section>
@@ -483,6 +492,7 @@
     <button class="btn icon-btn btn-ghost" type="button" data-close-panel aria-label="닫기" data-autofocus>✕</button>
   </header>
   <div class="panel-body" id="placeBody"></div>
+  <input type="file" id="placePhotoFile" accept="image/*" hidden>
 </aside>
 
 <!-- 위시 추가·편집 패널 -->
@@ -592,6 +602,20 @@
     <p class="dim ms-desc" id="msDesc"></p>
     <div class="row ms-acts"><button class="btn btn-ghost" type="button" id="msVault">배지 보관함 보기</button><button class="btn btn-primary" type="button" id="msClose">계속 여행하기</button></div>
   </div>
+</div>
+
+<!-- 3D 시네마틱 지구본(F1-12) -->
+<div class="cinema" id="cinema" hidden role="dialog" aria-modal="true" aria-labelledby="cinemaTitle">
+  <div class="cinema-globe" id="cinemaGlobe"></div>
+  <div class="cinema-top">
+    <div><div class="eyebrow">Cinematic Globe</div><h2 class="h-display cinema-title" id="cinemaTitle">나의 여정 <span class="gold-text">3D</span></h2><p class="dim cinema-sub" id="cinemaSub"></p></div>
+    <span class="spacer"></span>
+    <button class="btn btn-primary" type="button" id="cinemaTour" disabled>▶ 여정 투어</button>
+    <button class="btn icon-btn" type="button" id="cinemaClose" aria-label="3D 지구본 닫기">✕</button>
+  </div>
+  <p class="cinema-status" id="cinemaStatus" role="status"></p>
+  <div class="cinema-caption glass" id="cinemaCaption" hidden aria-live="polite"></div>
+  <p class="cinema-hint faint">끌어서 돌리고, 휠·두 손가락으로 확대해요</p>
 </div>
 
 <div class="toast-wrap" id="toasts" aria-live="polite">

@@ -17,7 +17,7 @@ test('CSV 글자: 쉼표·따옴표·줄바꿈을 감싸고, 다시 읽으면 �
   const rows = [['이름', '메모'], ['교토', '골목, "말차"\n둘째 줄']];
   const text = toCSV(rows);
   assert.equal(text, '이름,메모\r\n교토,"골목, ""말차""\n둘째 줄"\r\n');
-  assert.deepEqual(parseCSV('﻿' + text), rows);
+  assert.deepEqual(parseCSV(String.fromCharCode(0xfeff) + text), rows);
   assert.deepEqual(parseCSV('일본\t프랑스\r\n미국\t'), [['일본', '프랑스'], ['미국', '']]);   // 엑셀에서 복사(탭)
 });
 

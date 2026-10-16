@@ -43,6 +43,7 @@ import { initCsvIO, openPasteBox } from './ui/csv-io.js';
 import { initBackupBanner, noteChange } from './ui/backup-banner.js';
 import { playScratch } from './ui/sound.js';
 import { initPwa } from './pwa.js';
+import { initCinema, cinemaOpen } from './map/globe3d.js';
 
 const $ = id => document.getElementById(id);
 const VIEWS = { world: worldView, korea: koreaView, globe: globeView };
@@ -135,7 +136,7 @@ const app = {
   onZoomStart: () => closePopover(),
   // 지구본: 자전 스위치, 팝오버가 열려 있으면 자전을 멈춤
   spin: () => $('spinToggle').checked,
-  busy: () => !$('popover').hidden,
+  busy: () => !$('popover').hidden || cinemaOpen(),
   onBackground: () => closePopover(),
   // 지도에 별로 띄울 위시(아직 방문 전). 세계 지도는 나라·도시, 한국 지도는 시도·시군구
   stars(view) {
@@ -313,6 +314,7 @@ async function show(name) {
   // 지구본은 FLIGHT LOG HUD + 세계 범례
   for (const [id, v] of [['legendWorld', 'world globe'], ['legendKorea', 'korea'], ['hudWorld', 'world'], ['hudKorea', 'korea'], ['hudGlobe', 'globe']]) $(id).hidden = !v.split(' ').includes(name);
   $('spinWrap').hidden = name !== 'globe';
+  $('cinemaBtn').hidden = name !== 'globe';
   $('unitSeg').hidden = name !== 'korea';
   document.querySelectorAll('#unitSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === krUnit)));
 
@@ -433,6 +435,11 @@ async function start() {
   });
   initSettingsPanel();
   initCsvIO();
+  initCinema(() => {
+    const s = getState(), cs = countryStats(s, countryList(), { includeTransit: settings.includeTransit }), dist = travelDistance(s);
+    const trips = s.trips.filter(t => tripStarted(t)).length;
+    return [`${cs.visited}개국`, trips && `여행 ${trips}번`, dist.km && `지구 ${dist.laps.toFixed(1)}바퀴`].filter(Boolean).join(' · ');
+  });
   initBackupBanner(() => { const s = getState(); return !!(Object.keys(s.places).length || s.trips.length || s.wishlist.length); });
   initTripForm({ onDeleted: () => { if (route === 'trips') renderTrips(); } });
   initWishForm();

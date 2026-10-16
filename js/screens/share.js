@@ -9,7 +9,7 @@ import { tripYears, todayStr } from '../stats.js';
 import { fmtRange } from '../format.js';
 import { HOME_AIRPORT } from '../map/mini.js';
 import {
-  worldModel, koreaModel, yearModel, tripModel, cardTrips, parseSize, exportSize, TEMPLATES,
+  worldModel, koreaModel, yearModel, tripModel, wishModel, cardTrips, parseSize, exportSize, TEMPLATES,
 } from '../share/model.js';
 import { drawPoster, ensureFonts } from '../share/poster.js';
 import { toast } from '../ui/toast.js';
@@ -38,6 +38,7 @@ const geo = {
   korea: () => loadJSON('data/korea-sido.json').then(t => ({ features: feature(t, t.objects.sido).features })),
 };
 geo.year = geo.world;
+geo.wish = geo.world;
 geo.trip = () => Promise.all([geo.world(), geo.korea()]).then(([world, korea]) => ({ world, korea }));
 
 function pressed(groupId, attr, value) {
@@ -74,11 +75,19 @@ const pickYears = s => { const ys = tripYears(s); const now = +todayStr().slice(
 const pickedYear = s => (pickYears(s).includes(opt.year) ? opt.year : pickYears(s)[0]);
 const pickedTrip = s => { const list = cardTrips(s); return list.find(t => t.id === opt.trip) ?? list.find(t => t.start && t.start <= todayStr()) ?? list[0] ?? null; };
 const infoOf = id => { const p = placeInfo(id); return p.ll ? { name: p.name, ll: p.ll } : null; };
+// 위시 보드: 도시·시도는 속한 나라 이름도(국가 위시는 이름이 곧 나라)
+const wishInfo = id => {
+  const p = placeInfo(id);
+  if (!p.ll) return null;
+  const country = p.kind === 'city' ? placeInfo(`country:${p.countryId}`).name : p.kind === 'sido' || p.kind === 'sigungu' ? '대한민국' : null;
+  return { name: p.name, ll: p.ll, countryName: country };
+};
 
 function modelFor(s) {
   const home = { code: HOME_AIRPORT.code, ll: HOME_AIRPORT.ll };
   if (opt.tpl === 'korea') return koreaModel(s, sidoList());
   if (opt.tpl === 'year') return yearModel(s, countryList(), { year: pickedYear(s), home, infoOf });
+  if (opt.tpl === 'wish') return wishModel(s, countryList(), { infoOf: wishInfo });
   if (opt.tpl === 'trip') {
     const trip = pickedTrip(s);
     if (trip) return tripModel(s, countryList(), { trip, home, infoOf });
@@ -93,7 +102,8 @@ function current() {
   const o = { W, H, theme: opt.theme, nums: opt.nums, dates: opt.dates, mark: opt.mark, title: opt.title[opt.tpl] || model.title || t.title, eyebrow: t.eyebrow, name: opt.name };
   const texts = [o.title, o.eyebrow, model.dates, model.big, model.bigLabel, model.summary, o.name, '독도 ✦ VOYAGE ATLAS 0123456789/…→',
     ...(model.rows ?? []).map(r => r.label), ...(model.chips ?? []).map(c => c.label),
-    ...(model.facts ?? []).flatMap(f => [f.label, f.value]), ...(model.lines ?? []), ...(model.stops ?? []).map(x => x.label)];
+    ...(model.facts ?? []).flatMap(f => [f.label, f.value]), ...(model.lines ?? []), ...(model.stops ?? []).map(x => x.label),
+    ...(model.stars ?? []).map(x => x.label ?? '')];
   return { model, o, texts };
 }
 
@@ -142,7 +152,7 @@ export async function renderShare() {
   drawPoster(canvas, model, geoOf(g, model), { ...o, scale: 1 });
   canvas.setAttribute('aria-label', `공유 포스터 미리 보기: ${o.title}, ${model.big}${model.bigLabel}`);
   const [pw, ph] = exportSize(opt.size);
-  $('shInfo').textContent = model.empty ? '여행을 기록하면 여행 카드를 만들 수 있어요. 지금은 월드 포스터로 보여 줘요.'
+  $('shInfo').textContent = opt.tpl === 'wish' && !model.stars.length ? '위시리스트에 꿈꾸는 곳을 담으면 별이 떠요.' : model.empty ? '여행을 기록하면 여행 카드를 만들 수 있어요. 지금은 월드 포스터로 보여 줘요.'
     : `저장 크기 ${pw}×${ph}px ${opt.size === 'a3' ? '(A3 297×420mm, 300dpi)' : '(2배 해상도)'}`;
   // 미리 보기가 멈추면 저장 이미지를 미리 만들어 둠
   exportTimer = setTimeout(() => { if (my === seq) job = { seq: my, blob: makeBlob(model, g, o) }; }, 500);

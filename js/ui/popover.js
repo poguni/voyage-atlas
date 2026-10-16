@@ -2,6 +2,7 @@
 // 미방문: [✦ 긁어서 방문 표시] [☆ 위시에 담기] [＋ 기록 추가]
 // 방문함: [◎ 상세 보기] [☆ 위시] [＋ 기록 추가]
 // 아래 줄: 경유로 표시 / 경유 표시 지우기 / 방문 표시 지우기
+import { photoURL } from '../photos.js';
 import { flagHTML } from './flag.js';
 import { esc } from '../env.js';
 
@@ -17,6 +18,7 @@ export function initPopover(h) {
   $('popTransit').onclick = () => target && h.transit(target);
   $('popClear').onclick = () => target && h.clear(target);
   $('popClose').onclick = () => closePopover(true);
+  $('popPhoto').onclick = () => target && h.detail(target);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('popover').hidden) closePopover(true); });
 }
 
@@ -35,6 +37,10 @@ export function openPopover(t, screen, v, { focus = false } = {}) {
   returnFocus = focus ? document.activeElement : null;
 
   $('popFlag').innerHTML = flagHTML(v.iso2, v.name, 30);
+  // 대표 사진(F2-10)이 있으면 이름 옆에 작게
+  const ph = $('popPhoto'), id = t.placeId;
+  ph.hidden = true; ph.removeAttribute('src');
+  photoURL(id).then(u => { if (u && target?.placeId === id) { ph.src = u; ph.alt = `${v.name} 대표 사진`; ph.hidden = false; } });
   $('popName').textContent = v.name;
   const statusText = v.status === 'visited' ? `방문 ${v.count}회` : v.status === 'transit' ? '경유' : v.wished ? '위시리스트' : '미방문';
   $('popMeta').textContent = [v.sub, statusText].filter(Boolean).join(' · ');

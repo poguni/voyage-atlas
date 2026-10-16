@@ -4,7 +4,7 @@ import {
   tripYear, tripDays, tripIncludes, countryOf, sidoOf, distanceSummary, tripDistanceKm, COMPANIONS, KOREA,
 } from '../stats.js';
 import { CONT, CONT_ORDER } from '../data.js';
-import { fmtRange, fmtStars } from '../format.js';
+import { fmtRange, fmtStars, fmtDate, WISH_PRIORITY, PRIORITY_ORDER } from '../format.js';
 
 export const SIZES = [['1080x1350', '세로 4:5'], ['1080x1920', '스토리 9:16'], ['1080x1080', '정사각'], ['1920x1080', '가로 16:9'], ['a3', '인쇄 A3']];
 export const EXPORT_SCALE = 2;   // 저장 이미지는 2배 해상도(F8-10)
@@ -26,6 +26,7 @@ export const TEMPLATES = {
   korea: { title: '대한민국 정복 지도', eyebrow: 'KOREA CONQUEST' },
   year: { title: '올해의 여정', eyebrow: 'YEAR IN TRAVEL' },
   trip: { title: '여행 카드', eyebrow: 'TRAVEL CARD' },
+  wish: { title: '내가 꿈꾸는 곳', eyebrow: 'WISH BOARD' },
 };
 
 const level = n => Math.min(4, n);
@@ -224,5 +225,42 @@ export function tripModel(state, countries, { trip, home, infoOf }) {
     ].filter(Boolean),
     summary: [COMPANIONS[trip.companion], fmtStars(trip.rating), km && `${fmtKm(km)}km`].filter(Boolean).join(' · ') || fmtRange(trip),
     dates: trip.start ? fmtRange(trip) : null,
+  };
+}
+
+// ---------- 템플릿 ⑤ 위시 보드(F8-6) ----------
+export const WISH_LABELS = 8;   // 지도에 이름을 쓰는 별 수(나머지는 별만)
+
+/**
+ * "내가 꿈꾸는 곳" 별 지도: 아직 이루지 않은 위시를 순위(우선순위 → 목표 시기 → 직접 정한 순서)대로 번호 붙여 별로.
+ * 위시가 있는 나라는 은은하게 칠하고, 이미 다녀온 곳의 위시(다시 가고 싶은 곳)도 별로 보여 줍니다.
+ * @param infoOf placeId → { name, ll, countryName? } | null
+ */
+export function wishModel(state, countries, { infoOf, today = todayStr() }) {
+  const places = state.places ?? {};
+  const all = state.wishlist ?? [];
+  const open = all.filter(w => !w.doneAt)
+    .sort((a, b) => PRIORITY_ORDER.indexOf(a.priority ?? 'someday') - PRIORITY_ORDER.indexOf(b.priority ?? 'someday')
+      || (a.targetMonth ?? '9999').localeCompare(b.targetMonth ?? '9999') || (a.order ?? 0) - (b.order ?? 0));
+  const items = open.map(w => ({ w, info: infoOf(w.placeId) })).filter(x => x.info?.ll);
+  const wishLands = new Set(open.map(w => countryOf(w.placeId, places)).filter(Boolean));
+  const done = all.filter(w => w.doneAt).length;
+  const pct = all.length ? Math.round(done / all.length * 100) : 0;
+  const conts = new Set(open.map(w => countries.find(c => c.id === countryOf(w.placeId, places))?.cont).filter(Boolean));
+  const months = open.map(w => w.targetMonth).filter(m => m && m >= today.slice(0, 7)).sort();
+  return {
+    kind: 'world',
+    title: '내가 꿈꾸는 곳',
+    levels: new Map(),
+    wishLands,
+    stars: items.map(({ w, info }, i) => ({ placeId: w.placeId, ll: info.ll, label: i < WISH_LABELS ? `${i + 1} ${info.name}` : null })),
+    big: String(open.length),
+    bigLabel: `곳 · 이룬 꿈 ${done}`,
+    facts: items.slice(0, 6).map(({ w, info }, i) => ({
+      label: `${i + 1}. ${info.name}`,
+      value: [info.countryName, w.targetMonth ? fmtDate(w.targetMonth) : WISH_PRIORITY[w.priority] ?? '언젠가'].filter(Boolean).join(' · '),
+    })),
+    summary: [`위시 ${open.length}곳`, conts.size && `${conts.size}개 대륙`, all.length && `달성률 ${pct}%`].filter(Boolean).join(' · '),
+    dates: months.length ? (months[0] === months.at(-1) ? fmtDate(months[0]) : `${fmtDate(months[0])} — ${fmtDate(months.at(-1))}`) : null,
   };
 }

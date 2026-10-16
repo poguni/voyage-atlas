@@ -497,6 +497,7 @@ textarea.input{padding:10px 12px;line-height:1.5;resize:vertical}
 .tpl .thumb-korea::after{left:15px;right:15px;top:10px;height:30px;border-radius:40% 50% 30% 45%}
 .tpl .thumb-year{background:linear-gradient(160deg,#2A1640,#070B1F)}
 .tpl .thumb-trip::after{left:8px;right:8px;top:18px;height:20px;border-radius:0;background:none;border-top:2px dashed var(--gold-strong);border-radius:50% 50% 0 0;opacity:1}
+.tpl .thumb-wish::after{left:9px;right:9px;top:14px;height:26px;border-radius:0;opacity:1;background:radial-gradient(circle at 25% 30%,var(--wish) 0 2px,transparent 3px),radial-gradient(circle at 70% 20%,var(--wish) 0 1.5px,transparent 2.5px),radial-gradient(circle at 55% 75%,var(--wish) 0 2.5px,transparent 3.5px)}
 .opt-group[hidden]{display:none}
 .poster-stage{display:grid;place-items:center;padding:24px;border-radius:24px;background:repeating-conic-gradient(var(--panel-2) 0 25%,var(--panel) 0 50%) 0 0/24px 24px;min-height:620px}
 .poster-stage canvas{display:block;width:auto;height:auto;max-width:100%;max-height:72vh;border-radius:6px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
@@ -710,4 +711,52 @@ body.offline .topbar{top:46px}
   body.offline{padding-top:36px}
   body.offline .topbar{top:auto}
   .notice{max-width:none}
+}
+
+/* ============================================================
+   Phase 6: 대표 사진, 3D 시네마틱 지구본
+   ============================================================ */
+/* 장소 대표 사진(F2-10) */
+.pd-photo{margin:14px 0 0}
+.pd-photo img{display:block;width:100%;max-height:300px;object-fit:cover;border-radius:16px;border:1px solid var(--line)}
+.pd-photo-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.pd-photo-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;min-height:88px;border:1.5px dashed var(--line);border-radius:16px;background:var(--panel-2);color:var(--gold);cursor:pointer;font-size:14px}
+.pd-photo-add small{color:var(--text-faint);font-size:12px}
+.pd-photo-add:hover{border-color:var(--gold)}
+.pop-photo{width:52px;height:52px;margin-left:auto;margin-right:24px;flex:none;object-fit:cover;border-radius:12px;border:1px solid var(--line);cursor:pointer}
+.pop-photo[hidden]{display:none}
+/* 3D 시네마틱 지구본(F1-12): 전체 화면, 별 하늘이 비치는 투명 배경 */
+.cinema-btn{min-height:32px;padding:0 12px;font-weight:700;color:var(--gold-strong)}
+.cinema-btn[hidden]{display:none}
+.cinema{position:fixed;inset:0;z-index:85;background:
+  radial-gradient(1px 1px at 12% 18%,#fff8 50%,transparent 51%),radial-gradient(1px 1px at 78% 12%,#fff9 50%,transparent 51%),
+  radial-gradient(1.5px 1.5px at 33% 72%,#fff7 50%,transparent 51%),radial-gradient(1px 1px at 88% 64%,#fff8 50%,transparent 51%),
+  radial-gradient(1.5px 1.5px at 6% 88%,#fff6 50%,transparent 51%),radial-gradient(1px 1px at 58% 8%,#fff7 50%,transparent 51%),
+  radial-gradient(1px 1px at 95% 35%,#fff6 50%,transparent 51%),radial-gradient(1px 1px at 22% 45%,#fff5 50%,transparent 51%),
+  radial-gradient(120% 90% at 50% 40%,#141C45,#070B1F)}
+.cinema[hidden]{display:none}
+.cinema-globe{position:absolute;inset:0}
+.cinema-top{position:absolute;top:20px;left:24px;right:24px;display:flex;align-items:flex-start;gap:10px;pointer-events:none}
+.cinema-top > *{pointer-events:auto}
+.cinema-title{font-size:clamp(26px,3.4vw,40px);margin:4px 0 0}
+.cinema-sub{margin:6px 0 0;font-size:13px}
+.cinema-status{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;color:var(--text-dim);text-align:center;max-width:min(420px,calc(100vw - 32px))}
+.cinema-status:empty{display:none}
+.cinema-caption{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center;padding:14px 22px;border-radius:20px;max-width:min(560px,calc(100vw - 32px));animation:rise .35s var(--ease)}
+.cinema-caption[hidden]{display:none}
+.cinema-caption b{font-family:var(--font-display,inherit);font-size:20px}
+.cinema-caption small{color:var(--text-dim);font-size:13px}
+.g3-year{color:var(--gold);font-size:12px;letter-spacing:2px}
+.cinema-hint{position:absolute;bottom:20px;left:0;right:0;text-align:center;font-size:12px;margin:0;pointer-events:none}
+.g3-tip{padding:6px 10px;border-radius:10px;background:var(--panel-solid);border:1px solid var(--line);font-size:13px;color:var(--text)}
+.g3-mark{display:flex;align-items:center;gap:5px;transform:translate(-4px,-50%);font-size:12px;font-weight:600;color:#F5F1E8;text-shadow:0 1px 3px #070B1F,0 0 6px #070B1F;white-space:nowrap;pointer-events:none}
+.g3-mark i{width:7px;height:7px;border-radius:50%;background:#F6DFAE;box-shadow:0 0 6px #E8C98A}
+.g3-mark.home i{background:#2EC4B6;box-shadow:0 0 8px #2EC4B6}
+.g3-mark.home span{font-family:"JetBrains Mono",monospace;color:#7FE3D9}
+.g3-mark.wish svg{width:14px;height:14px;fill:#FFD166;filter:drop-shadow(0 0 4px #FFD166)}
+.g3-mark.wish span{color:#FFE7A3}
+.g3-mark.city span{opacity:.92}
+@media (max-width:720px){
+  .cinema-top{top:12px;left:12px;right:12px;flex-wrap:wrap}
+  .cinema-caption{bottom:52px}
 }

@@ -6,6 +6,7 @@ import { toBackup, parseBackup } from '../backup.js';
 import { toast } from './toast.js';
 import { esc } from '../env.js';
 import { playChime } from './sound.js';
+import { exportPhotos, importPhotos, clearPhotos, photoIds } from '../photos.js';
 
 const $ = id => document.getElementById(id);
 const LAST_BACKUP = 'va-last-backup';
@@ -33,7 +34,8 @@ async function showStorage() {
   const { usage = 0, quota = 0 } = await navigator.storage.estimate();
   const pct = quota ? usage / quota * 100 : 0;
   const mb = n => (n / 1024 / 1024).toFixed(n < 10 * 1024 * 1024 ? 2 : 0);
-  el.textContent = `${mb(usage)}MB 사용 / ${mb(quota)}MB 가능 (${pct.toFixed(pct < 1 ? 2 : 0)}%)`;
+  const photos = (await photoIds()).length;
+  el.textContent = `${mb(usage)}MB 사용 / ${mb(quota)}MB 가능 (${pct.toFixed(pct < 1 ? 2 : 0)}%)${photos ? ` · 대표 사진 ${photos}장` : ''}`;
   bar.style.width = Math.max(1, pct) + '%';
   bar.parentElement.classList.toggle('warn', pct >= 80);
 }
@@ -50,8 +52,11 @@ export function saveFile(blob, name) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-export function downloadBackup() {
-  const blob = new Blob([JSON.stringify(toBackup(getState()), null, 2)], { type: 'application/json' });
+// 대표 사진(F2-10)은 [사진 포함]을 켰을 때만 백업 파일에 넣습니다(사진 1장 약 50KB).
+export async function downloadBackup() {
+  const backup = toBackup(getState());
+  if ($('backupPhotos').checked) { const photos = await exportPhotos(); if (Object.keys(photos).length) backup.photos = photos; }
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const d = new Date();
   const name = `voyage-atlas-backup-${dateStamp(d)}.json`;
   saveFile(blob, name);
@@ -72,9 +77,12 @@ async function onFile(e) {
   e.target.value = '';
   if (!file) return;
   try {
-    const incoming = parseBackup(await file.text());
+    const text = await file.text();
+    const incoming = parseBackup(text);
     const undo = restoreState(incoming, restoreMode);
-    toast(`⤒ 백업을 불러왔어요(${restoreMode === 'merge' ? '합치기' : '덮어쓰기'})`, { label: '실행 취소', fn: undo });
+    // 사진이 든 백업이면 사진도(실행 취소는 기록만 되돌림)
+    const n = await importPhotos(JSON.parse(text).photos, restoreMode);
+    toast(`⤒ 백업을 불러왔어요(${restoreMode === 'merge' ? '합치기' : '덮어쓰기'}${n ? ` · 사진 ${n}장` : ''})`, { label: '실행 취소', fn: undo });
   } catch (err) {
     toast(`불러오지 못했어요: ${esc(err.message)}`);
   }
@@ -109,6 +117,7 @@ export function initSettingsPanel() {
   $('resetNo').addEventListener('click', () => { $('resetConfirm').hidden = true; $('resetBtn').hidden = false; $('resetBtn').focus(); });
   $('resetYes').addEventListener('click', () => {
     resetState();
+    clearPhotos();
     $('resetConfirm').hidden = true;
     $('resetBtn').hidden = false;
     toast('모든 기록을 지웠어요.');
