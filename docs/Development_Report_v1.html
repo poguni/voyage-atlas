@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나의 여정 지도(Voyage Atlas) 개발 보고서 v1</title>
+<style>
+  :root { --sidebar-w: 260px; --accent: #4F46E5; --text: #1f2430; --muted: #6b7280; --bg: #ffffff; --panel: #f7f7fb; --border: #e5e7eb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", "Noto Sans KR", sans-serif; color: var(--text); background: var(--bg); line-height: 1.6; }
+  .layout { display: flex; min-height: 100vh; }
+  nav.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-w); flex-shrink: 0; height: 100vh; overflow-y: auto; padding: 24px 16px; background: var(--panel); border-right: 1px solid var(--border); }
+  nav.sidebar h1 { font-size: 15px; margin: 0 0 4px; }
+  nav.sidebar .meta { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  nav.sidebar a { display: block; padding: 7px 10px; margin: 2px 0; font-size: 13.5px; color: var(--text); text-decoration: none; border-radius: 8px; }
+  nav.sidebar a:hover { background: #eceafd; }
+  nav.sidebar a.active { background: var(--accent); color: #fff; }
+  main { flex: 1; min-width: 0; padding: 40px 48px; max-width: 860px; }
+  main .doc-title { font-size: 26px; margin: 0 0 8px; }
+  main .doc-meta { color: var(--muted); font-size: 14px; margin: 0 0 40px; padding-left: 18px; }
+  main section { margin-bottom: 48px; scroll-margin-top: 24px; }
+  main h2 { font-size: 22px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+  main h3 { font-size: 17px; color: var(--accent); }
+  main table { border-collapse: collapse; width: 100%; margin: 12px 0; display: block; overflow-x: auto; }
+  main th, main td { border: 1px solid var(--border); padding: 8px 10px; font-size: 14px; text-align: left; vertical-align: top; }
+  main th { background: var(--panel); }
+  main code { background: #f1f1f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  main pre { background: #1f2430; color: #eee; padding: 14px; border-radius: 8px; overflow-x: auto; }
+  main pre code { background: none; padding: 0; }
+  main blockquote { margin: 12px 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--panel); font-size: 14px; }
+  main a { color: var(--accent); }
+  @media (max-width: 800px) {
+    .layout { flex-direction: column; }
+    nav.sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <h1>나의 여정 지도(Voyage Atlas)</h1>
+    <div class="meta">개발 보고서 v1 · 2026-10-17</div>
+    <a href="#sec-1">1. 개요</a>
+    <a href="#sec-2">2. 목표 및 배경</a>
+    <a href="#sec-3">3. 주요 기능</a>
+    <a href="#sec-4">4. 기술 스택 및 아키텍처</a>
+    <a href="#sec-5">5. 개발 과정 (타임라인)</a>
+    <a href="#sec-6">6. 주요 의사결정과 이유</a>
+    <a href="#sec-7">7. 문제 해결 기록</a>
+    <a href="#sec-8">8. 보안/성능 고려사항</a>
+    <a href="#sec-9">9. 테스트 및 검증</a>
+    <a href="#sec-10">10. 배포</a>
+    <a href="#sec-11">11. 알려진 한계</a>
+    <a href="#sec-12">12. 향후 개선 아이디어 / 업데이트 계획</a>
+  </nav>
+  <main id="content">
+<h1 class="doc-title">나의 여정 지도(Voyage Atlas) 개발 보고서 (v1)</h1><ul class="doc-meta"><li>작성일: 2026-10-17</li><li>버전: v1</li><li>기준 커밋: <code>e950d99</code> (docs: Phase 6a 완료 결과 반영, 구현 계획 v2.3)</li></ul>
+<section id="sec-1"><h2>1. 개요</h2>
+<table><thead><tr><th>항목</th><th>내용</th></tr></thead><tbody><tr><td>앱 이름</td><td>나의 여정 지도(Voyage Atlas)</td></tr><tr><td>한 줄 소개</td><td>다녀온 곳은 금박을 긁어 빛나게, 가고 싶은 곳은 별로 새기는 나만의 세계 지도</td></tr><tr><td>대상 사용자</td><td>개인 전용(로그인 없음). 여행 기록을 모으고 다음 여행지를 고르고 싶은 한 사람</td></tr><tr><td>형태</td><td>빌드 없는 정적 웹 앱(PWA), GitHub Pages 배포</td></tr><tr><td>개발 기간</td><td>2026-10-15 ~ 2026-10-17 (3일, 커밋 33개)</td></tr><tr><td>진행 상태</td><td>Phase 0 ~ 5(P0·P1 전체) 완료, Phase 6(P2) 중 6a 완료</td></tr><tr><td>규모</td><td>JS 모듈 56개(약 6,700줄), CSS 약 820줄, 테스트 11개 파일(93개 테스트)</td></tr><tr><td>배포</td><td><a href="https://poguni.github.io/voyage-atlas/">https://poguni.github.io/voyage-atlas/</a></td></tr></tbody></table>
+</section>
+<section id="sec-2"><h2>2. 목표 및 배경</h2>
+<p>여행은 다녀온 뒤에 기억이 흩어지기 쉽습니다. 언제 어디를 몇 번 갔는지는 금방 헷갈리고, "언젠가 가고 싶은 곳"은 머릿속에만 머물다 잊힙니다.</p>
+<p>종이 <strong>스크래치 맵</strong>은 금박을 긁는 단순한 행동만으로 큰 성취감을 줍니다. 이 앱은 그 감각을 디지털로 옮기고, 종이 지도로는 할 수 없는 세 가지를 더합니다.</p>
+<ol><li><strong>기록</strong>: 방문 날짜·횟수·동행·메모를 쌓아 "나의 여행 연대기"를 만듭니다.</li><li><strong>통계와 성취</strong>: 방문 국가 수, 대륙 비율, 여행 일수, 이동 거리, 배지로 성장을 보여 줍니다.</li><li><strong>희망</strong>: 위시리스트와 AI 추천 여행지를 지도 위에 별처럼 띄웁니다.</li></ol>
+<p>디자인이 전달해야 할 감정은 <strong>성취감(긁기·배지), 추억(연대기·경로 다시 보기), 기대(별·D-day), 자부심(포스터 품질 공유 이미지)</strong> 네 가지로 정했습니다. 디자인 콘셉트는 "Midnight Atlas &amp; Gold Foil"(밤하늘 + 금박)입니다.</p>
+<p>성공 지표(개인 사용 기준): 첫날 10분 안에 다녀온 곳 모두 색칠, 귀국 1주일 안에 기록 90% 이상, 공유 이미지 1회 이상 공유, 위시 1곳 이상 "꿈 → 현실" 전환, AI 추천지 1곳 이상을 트립픽 후보로 검토.</p>
+</section>
+<section id="sec-3"><h2>3. 주요 기능</h2>
+<h3>지도</h3>
+<ul><li>세계(Natural Earth 투영) · 2D 지구본(자전·관성) · 대한민국(시도 17칸 / 시군구 230곳) 보기와 투영 전환 연출</li><li>클릭 팝오버 → <strong>금박 긁기</strong> 연출(850ms 마스크 + 금가루), 빠른 색칠 모드, 5초 실행 취소</li><li>상태: 방문함 / 경유(빗금) / 위시(점선 + 별) / 미방문. 방문 횟수 4단계 오로라 색</li><li>색칠 기준 전환: 방문 횟수 · 상태 · 마지막 방문 연도 · 동행 유형</li><li>작은 나라 원형 마커 43개, <strong>독도 마커·라벨 항상 표시</strong>, 다녀온 도시 핀</li><li>한국어·영어·<strong>초성</strong> 검색(나라·시도·도시 3만 3천 곳)</li><li><strong>3D 시네마틱 지구본</strong>(globe.gl 지연 로딩): 솟아오른 나라, 금빛 비행 궤적, 여정 투어</li></ul>
+<h3>기록·통계</h3>
+<ul><li>여행 연대기(연도별 타임라인), 경로 지도(대권 곡선), 경로 다시 보기(비행기 아이콘), 전체 연대기 재생(연도 슬라이더), 다가오는 여정 D-day</li><li>장소 상세(국기, 방문 기록, 관련 여행, 도시 칩, 메모, <strong>대표 사진</strong>)</li><li>통계 대시보드: KPI 4칸(방문국·대륙·여행 일수·지구 ○바퀴), 대륙 도넛, 연도별·월별 막대, 많이 간 나라 TOP 5, 동행 비율, 위시 달성률, "기록으로 본 나"</li><li>마일스톤 배지 13개, 축하 창(코인 회전 + 색종이), 배지 보관함, 다음 목표 제안</li></ul>
+<h3>위시·AI</h3>
+<ul><li>위시리스트(우선순위·목표 시기·D-day·예산·링크), 끌어서 순서 변경, "다녀왔어요" → 별이 떨어져 색칠되는 연출</li><li>AI 추천: OpenRouter로 Claude Sonnet 5.5 · GPT-6 Luna · Gemini 3.8 Flash 병렬 호출 → 결과 병합·합의(3/3·2/3·1/3) → 지도 핀, 비용 확인 창(USD·원화), 캐시, 지난 추천, 웹 검색 토글</li></ul>
+<h3>공유·데이터</h3>
+<ul><li>공유 스튜디오: 템플릿 5종(월드 포스터 · 대한민국 정복 지도 · 올해의 여정 · 여행 카드 · 위시 보드), 크기 5종(인스타 세로·스토리·정사각·가로·인쇄 A3), 테마 3종, PNG 저장·Web Share</li><li>IndexedDB 자동 저장, JSON 백업·복원(덮어쓰기/합치기, 사진 포함 선택), 백업 권유 배너, CSV 내보내기·이름 목록 붙여 넣기 색칠</li><li>PWA 오프라인 캐시(약 380개 파일), 효과음(Web Audio), 다크·라이트 테마, 애니메이션 줄이기</li><li>트립픽 연동 JSON과 '추천 제외 조건' 문장 복사</li></ul>
+</section>
+<section id="sec-4"><h2>4. 기술 스택 및 아키텍처</h2>
+<h3>4.1 기술 스택</h3>
+<table><thead><tr><th>영역</th><th>선택</th><th>이유</th></tr></thead><tbody><tr><td>형태</td><td>빌드 없는 정적 앱, ES 모듈, import map으로 CDN 버전 고정</td><td>빌드 도구 없이 GitHub Pages에 바로 배포. 파일별로 나눠 작업하기 쉬움</td></tr><tr><td>지도 엔진</td><td>D3 7.9.0(<code>d3-geo</code>·<code>d3-zoom</code>) + topojson-client 3.1.0</td><td>투영법만 바꿔 세계·지구본·한국 세 보기를 한 엔진으로</td></tr><tr><td>렌더링</td><td>SVG(경계·클릭) + Canvas(별 배경·파티클·지구본)</td><td>클릭·스타일은 SVG, 움직임이 많은 효과는 Canvas</td></tr><tr><td>3D</td><td>globe.gl 2.46.2(Three.js 포함 약 1.9MB), 버튼을 누를 때만 로딩</td><td>영화 같은 화면을 원할 때만 비용을 치름</td></tr><tr><td>저장</td><td>IndexedDB(idb-keyval 6.3.0), 사진은 별도 저장소. localStorage는 설정만</td><td>기록·사진이 늘어도 용량 여유</td></tr><tr><td>상태 관리</td><td>자체 구독 스토어</td><td>화면 수가 적어 프레임워크 불필요</td></tr><tr><td>AI</td><td>OpenRouter Chat Completions(<code>fetch</code>), <code>response_format: json_schema</code>(strict)</td><td>키 하나로 세 회사 모델</td></tr><tr><td>공유 이미지</td><td>d3.geoPath + Canvas 직접 그리기, <code>fillText</code></td><td>글꼴·해상도를 직접 제어</td></tr><tr><td>오프라인</td><td>Service Worker + Web App Manifest</td><td>여행지에서 데이터 없이 기록</td></tr><tr><td>테스트</td><td>Node 내장 테스트 러너(<code>node --test</code>), 화면은 Playwright</td><td>계산 정확성은 단위 테스트, 화면은 캡처로 시안과 비교</td></tr><tr><td>데이터 전처리</td><td>Node 스크립트(<code>tools/</code>), mapshaper</td><td>개발할 때만 한 번 실행</td></tr></tbody></table>
+<h3>4.2 데이터</h3>
+<table><thead><tr><th>데이터</th><th>출처</th><th>앱 파일</th></tr></thead><tbody><tr><td>세계 경계</td><td>world-atlas 2.0.2(Natural Earth) 110m·50m</td><td><code>data/countries-110m.json</code>(104KB), <code>countries-50m.json</code>(725KB)</td></tr><tr><td>한국 경계</td><td>통계청 SGIS → vuski/admdongkor <code>ver20260701</code>(CC BY 4.0)</td><td><code>data/korea-sido.json</code>(113KB), <code>korea-sigungu.json</code>(397KB)</td></tr><tr><td>국가 사전</td><td>직접 작성 + i18n-iso-countries</td><td><code>data/countries.ko.json</code>(195개국 + 지역 45곳)</td></tr><tr><td>국기</td><td>flag-icons 7.5.0 4:3 SVG</td><td><code>assets/flags/*.svg</code>(236개)</td></tr><tr><td>도시</td><td>GeoNames <code>cities15000</code> + 한국어 이름 있는 <code>cities1000</code> + 보강표 50곳</td><td><code>data/cities.json</code>(33,202곳, 1.8MB, 검색 시 지연 로딩)</td></tr></tbody></table>
+<h3>4.3 구조</h3>
+<pre><code>index.html (import map, 공통 SVG 필터)
+ └ js/main.js ── 해시 라우팅(#home #trips #wish #stats #ai #share)
+     ├ store.js ─ 구독 스토어 → IndexedDB 자동 저장(0.15초 debounce)
+     ├ 순수 함수(테스트 대상): stats · backup · badges · csv · trippick · hangul · share/model · ai/prompt · ai/merge
+     ├ map/  engine · world · korea · pins · globe(2D 지구본·전환) · globe3d(3D) · effects · mini
+     ├ screens/ trips · wish · ai · stats-view · share
+     ├ share/ model(숫자·배치) → poster(Canvas 그리기)
+     ├ ai/   config · prompt · merge · openrouter
+     └ ui/   popover · hud · search · toast · panel · trip-form · place-detail · milestone · …
+sw.js (앱 코드: 네트워크 먼저 / 지도·국기·데이터·라이브러리: 캐시 먼저)</code></pre>
+<p>계산(통계·백업·배지·병합·포스터 배치)은 화면과 분리한 <strong>순수 함수</strong>로 두고 모두 단위 테스트합니다. 화면 코드는 이 함수의 결과를 그리기만 합니다.</p>
+</section>
+<section id="sec-5"><h2>5. 개발 과정 (타임라인)</h2>
+<table><thead><tr><th>날짜</th><th>단계</th><th>내용</th><th>주요 커밋</th></tr></thead><tbody><tr><td>10-15</td><td>기획</td><td>PRD v0.3, 디자인 가이드(DESIGN.md), 화면 시안, 구현 계획서</td><td><code>150dd28</code></td></tr><tr><td>10-15</td><td><strong>Phase 0</strong> 기반·데이터</td><td>앱 셸, 디자인 토큰, 세계·한국 지도 전처리, 국가 사전 195개국, 국기 SVG 236개, 지도 엔진 1차. 데이터 테스트 16개</td><td><code>f174a22</code> <code>cd82bdc</code> <code>407ceee</code></td></tr><tr><td>10-15</td><td><strong>Phase 1</strong> 지도와 색칠(M1)</td><td>스토어·IndexedDB, 팝오버, 금박 긁기, 빠른 색칠, 실행 취소, HUD, 초성 검색, JSON 백업, 모바일 레이아웃. 테스트 32개</td><td><code>8c1a7e6</code> <code>2e82e94</code> <code>ac6ef67</code></td></tr><tr><td>10-15</td><td><strong>Phase 2</strong> 기록·통계·위시(M2)</td><td>GeoNames 도시 3만 3천 곳, 여행 일수 합집합 등 통계 TDD, 연대기, 장소 상세, 통계 대시보드, 위시리스트, 꿈 → 현실. 테스트 45개</td><td><code>17c2d5f</code> <code>e7afdca</code> <code>739c16e</code></td></tr><tr><td>10-15</td><td><strong>Phase 3</strong> 공유 이미지(M3)</td><td>공유 스튜디오, 템플릿 2종, 크기 4종, 테마 3종, PNG·Web Share. 테스트 51개</td><td><code>694e988</code></td></tr><tr><td>10-16</td><td><strong>Phase 4</strong> AI 추천(M4, MVP 완성)</td><td>OpenRouter 설정·병렬 호출, 프롬프트·스키마 검증, 비용 확인 창, 병합·합의·좌표 보정, 추천 화면. 테스트 62개</td><td><code>2865555</code> <code>3c2a2a0</code></td></tr><tr><td>10-16</td><td><strong>Phase 5a</strong> 성취</td><td>배지 13개, 달성 날짜 역산, 축하 창, 보관함. 테스트 70개</td><td><code>0c53ba0</code></td></tr><tr><td>10-16</td><td><strong>5b</strong> 지구본</td><td>2D 지구본(자전·관성·궤적), 세계↔지구본↔한국 전환 연출</td><td><code>870e4a4</code></td></tr><tr><td>10-16</td><td><strong>5c</strong> 경로</td><td>경로 다시 보기, 전체 연대기 재생, D-day. 테스트 71개</td><td><code>813ab3c</code></td></tr><tr><td>10-16</td><td><strong>5d</strong> 지도 확장</td><td>한국 시군구 지도, 도시 핀, 색칠 기준 전환. 테스트 76개</td><td><code>4060917</code></td></tr><tr><td>10-16</td><td><strong>5e</strong> 통계 확장</td><td>이동 거리(지구 ○바퀴), FLIGHT LOG HUD, 월별 빈도, 동행 비율, 위시 달성률. 테스트 79개</td><td><code>9e543b0</code></td></tr><tr><td>10-16</td><td><strong>5f</strong> 공유 확장</td><td>올해의 여정, 여행 카드, 인쇄 A3(3508×4961px). 테스트 83개</td><td><code>3a1bdbc</code></td></tr><tr><td>10-16</td><td><strong>5g</strong> 데이터·오프라인</td><td>PWA, 백업 권유, CSV, 효과음, AI 웹 검색 토글. 테스트 88개</td><td><code>0fb8c06</code></td></tr><tr><td>10-17</td><td><strong>Phase 6a</strong> 확장</td><td>3D 시네마틱 지구본, 장소 대표 사진, 위시 보드, 트립픽 연동 JSON. 테스트 93개</td><td><code>a6e54a0</code></td></tr></tbody></table>
+<p>각 Phase는 "구현 → 단위 테스트 → Playwright로 1440px·390px 화면 확인 → 사용자 검토 → 사용자가 직접 커밋" 순서로 진행했고, 끝날 때마다 구현 계획서(v1.4 → v2.3)와 PRD(v0.3 → v0.6)에 결과와 달라진 점을 기록했습니다.</p>
+</section>
+<section id="sec-6"><h2>6. 주요 의사결정과 이유</h2>
+<table><thead><tr><th>결정</th><th>대안</th><th>이유</th></tr></thead><tbody><tr><td><strong>빌드 없는 다중 파일 정적 앱(B안)</strong></td><td>A. 단일 HTML / C. Vite + TS + React + MapLibre</td><td>단일 HTML은 4,000줄을 넘으면 관리가 어렵고, C안은 빌드 부담이 크고 긁기 연출·공유 이미지가 오히려 복잡해짐. 3D만 P2에서 부분 도입</td></tr><tr><td><strong>국기는 SVG 이미지, 이모지 금지</strong></td><td>국기 이모지</td><td>윈도우에서는 국기 이모지가 "KR" 같은 글자로 보임. 테스트로 코드에 국기 이모지(U+1F1E6~1F1FF)가 없는지 매번 검사</td></tr><tr><td><strong>지도 데이터는 저장소에 보관</strong></td><td>CDN에서 불러오기</td><td>외부 변경·장애에 흔들리지 않고 오프라인 캐시가 쉬움</td></tr><tr><td><strong>한국 17칸 유지</strong></td><td>2026-07 통합된 전남광주통합특별시를 1칸으로</td><td>여행 기록은 광주와 전남을 따로 기억하는 경우가 많음. 툴팁에 행정 명칭을 함께 표시</td></tr><tr><td><strong>독도 원본 폴리곤 다시 넣기</strong></td><td>단순화 결과 그대로</td><td>단순화하면 독도가 사라짐. 동도·서도 원본을 다시 넣고 테스트로 좌표 포함 여부 검사</td></tr><tr><td><strong>'거주' 상태 삭제, 대한민국도 방문국</strong></td><td>거주 상태 유지</td><td>상태를 단순하게. 한국 시도를 하나라도 방문하면 대한민국 자동 방문</td></tr><tr><td><strong>방문 횟수 = 여행 수(단순 표시는 흡수)</strong></td><td>표시 + 여행 합산</td><td>표시만 하다가 여행을 넣었을 때 횟수가 부풀지 않게</td></tr><tr><td><strong>미래 날짜 여행은 통계 제외</strong></td><td>포함</td><td>"다가오는 여정"으로 따로 보여 주고 D-day에 사용</td></tr><tr><td><strong>공유 이미지를 Canvas에 직접 그리기</strong></td><td>오프스크린 SVG → 이미지 변환</td><td>SVG → 이미지 변환 때 글꼴이 빠지는 문제가 아예 생기지 않음</td></tr><tr><td><strong>AI 글자는 모두 이스케이프</strong></td><td>marked + DOMPurify</td><td>마크다운을 쓰지 않으므로 라이브러리가 필요 없음. XSS 위험도 원천 차단</td></tr><tr><td>**AI 결과 좌표를 <code>d3.geoContains</code>로 검증**</td><td>그대로 믿기</td><td>모델이 바다나 다른 나라 좌표를 줄 때 "위치 확인 필요"로 표시하고 보정</td></tr><tr><td><strong>앱 코드는 네트워크 먼저, 데이터는 캐시 먼저</strong></td><td>전부 캐시 먼저</td><td>배포한 뒤 캐시 이름을 안 바꿔도 다음 실행에 최신 코드가 적용됨</td></tr><tr><td><strong>2D 지구본은 110m 지도</strong></td><td>50m</td><td>매 프레임 다시 그려서 50m는 휴대폰에서 무거움</td></tr><tr><td><strong>3D는 전체 화면 별도 보기</strong></td><td>지도의 네 번째 보기</td><td>검색·색칠 같은 2D 기능과 섞지 않음. 닫을 때 WebGL 자원 정리</td></tr><tr><td><strong>사진은 긴 변 640px로 줄여 별도 저장소</strong></td><td>원본 보관</td><td>PRD의 Non-goal(원본 보관 안 함). 4032×3024 → 640×480</td></tr></tbody></table>
+</section>
+<section id="sec-7"><h2>7. 문제 해결 기록</h2>
+<table><thead><tr><th>문제</th><th>원인</th><th>해결</th></tr></thead><tbody><tr><td>모바일에서 검색 결과가 빠른 색칠 상자에 가려짐</td><td>위쪽 도구줄에 쌓임 순서(z-index)가 없었음</td><td>도구줄을 HUD·팝오버 위층(<code>z-index:30</code>, 패널·토스트보다는 아래)에 두고, 결과 목록을 도구줄 전체 폭으로(<code>ac6ef67</code>)</td></tr><tr><td>세계 ↔ 지구본 접기 연출 중 뒤쪽 반구가 앞쪽 위로 겹침</td><td>정사영의 뒤쪽 점이 원 안쪽으로 투영됨</td><td>뒤쪽을 원 바깥 고리로 펼쳤다가 테두리로 좁힘. 자르기를 쓰면 날짜변경선을 넘는 나라가 띠처럼 늘어나서 쓰지 않음</td></tr><tr><td>시도 경계선이 금박 위에서 안 보임</td><td><code>--foil-edge</code> 색이 금박과 비슷함</td><td>시군구 지도의 시도 경계를 어두운 선으로</td></tr><tr><td>AI 추천 지도에서 <code>app.cities is not a function</code></td><td>5d에서 도시 핀을 넣을 때 AI 지도에는 그 함수가 없었음. 다시 그릴 때 추천 핀 그리기가 멈춤</td><td>AI 지도는 도시 핀을 그리지 않게 함(5g에서 발견)</td></tr><tr><td>AI가 형식이 틀린 JSON을 줌</td><td>모델 응답 변동</td><td>strict 스키마 + 검증 실패 시 1회 자동 재요청(비용 합산), 끝내 틀리면 원문을 <code>&lt;pre&gt;</code>로</td></tr><tr><td>iOS에서 공유 창이 안 열릴 수 있음</td><td>iOS는 버튼을 누른 직후에만 공유 허용</td><td>PNG를 미리 만들어 두어 누르면 바로 공유</td></tr><tr><td>A3(3508×4961px) 저장 실패 가능성</td><td>iOS Safari의 캔버스 넓이 제한</td><td>실패하면 제한 안으로 조금 줄여 다시 저장</td></tr><tr><td>3D 지구본이 한글을 그리지 못함</td><td>Three.js 글자는 한글 글꼴이 없음</td><td>장소 이름은 HTML로 겹쳐 그림</td></tr><tr><td>날짜변경선을 넘는 여행 카드 경로(뉴욕)</td><td>경도가 −180/180에서 끊김</td><td>경로 둘레만 확대한 둥근 액자에서 대권 선을 이어서 그림</td></tr><tr><td>여행 일수가 겹쳐 부풀어짐(출장 + 여행)</td><td>단순 합산</td><td>날짜 합집합으로 계산(손으로 계산한 27일과 일치하는지 테스트)</td></tr><tr><td>한국어 도시 이름 누락·어색함('오사카 시')</td><td>GeoNames 표기</td><td>끝의 ' 시' 제거, 수작업 보강표 50곳, 다른 표기는 검색용 별칭(호치민 ↔ 호찌민)</td></tr><tr><td>시군구 코드가 도시 검색과 안 맞음</td><td>구가 있는 시(수원시장안구 등)</td><td>한 칸으로 합쳐 230곳, 도시 검색과 같은 코드 사용</td></tr></tbody></table>
+</section>
+<section id="sec-8"><h2>8. 보안/성능 고려사항</h2>
+<h3>보안·개인정보</h3>
+<ul><li>서버가 없고 기록은 모두 이 기기(IndexedDB)에만 저장합니다.</li><li>OpenRouter API 키는 "이 기기 저장 / 이번 세션만" 중에서 고르고, <strong>JSON 백업에 넣지 않습니다</strong>.</li><li>AI에 보내는 이력 요약에는 <strong>메모·여행 제목·동행인 이름을 넣지 않습니다</strong>(테스트로 확인).</li><li>AI 응답은 모두 이스케이프해서 표시합니다.</li><li>AI 실행 전 예상 비용을 보여 주고, 실행 후 <code>usage.cost</code>로 실제 비용을 기록합니다.</li></ul>
+<h3>성능</h3>
+<ul><li>세계 지도는 110m(104KB)를 먼저 그리고 50m(725KB)로 바꿉니다.</li><li>시군구 경계·도시 데이터·globe.gl은 처음 필요할 때만 불러옵니다.</li><li>공유 이미지 그리기 + PNG 변환은 0.1~0.25초입니다.</li><li>통계 계산 목표: 여행 500개에서 50ms 이내.</li><li>애니메이션 줄이기 설정이면 긁기·회전·색종이·카메라 이동을 생략합니다.</li></ul>
+</section>
+<section id="sec-9"><h2>9. 테스트 및 검증</h2>
+<h3>단위 테스트 (<code>npm test</code>, 2026-10-17 기준 93개 모두 통과)</h3>
+<table><thead><tr><th>파일</th><th>대상</th></tr></thead><tbody><tr><td><code>data.test.js</code></td><td>195개국, 대륙별 수, 지형-사전 연결, 국기 SVG 존재, 국기 이모지 없음, 한국 17칸·최신 코드·감는 방향·독도·울릉도·제주</td></tr><tr><td><code>stats.test.js</code>, <code>stats-more.test.js</code></td><td>방문 횟수 흡수, 대한민국 자동 방문, 경유 포함, 이동 거리, 월별·동행 통계, 백업 왕복·합치기·마이그레이션</td></tr><tr><td><code>trips.test.js</code></td><td>여행 일수 합집합, 국내·해외, 연말을 넘는 여행, 예정 여행 제외, TOP, D-day, 연대기 재생 장면</td></tr><tr><td><code>badges.test.js</code></td><td>배지 달성·진행률, 달성 날짜 역산, 다음 목표</td></tr><tr><td><code>ai.test.js</code></td><td>이력 요약(메모 미포함), 제외 목록, 스키마·검증, 병합·합의, 좌표 보정, 비용 추정(저장된 응답 샘플, 실제 호출 없음)</td></tr><tr><td><code>share.test.js</code></td><td>포스터 숫자, 날짜 범위, 크기별 배치 겹침, 2배 해상도·A3</td></tr><tr><td><code>data-io.test.js</code></td><td>CSV 따옴표·줄바꿈, 이름 목록 인식, 백업 권유 조건</td></tr><tr><td><code>phase6.test.js</code></td><td>트립픽 JSON·제외 조건 200자, 위시 보드 순서·배치, 썸네일 크기</td></tr><tr><td><code>map.test.js</code>, <code>hangul.test.js</code></td><td>지도 보조 계산, 초성 검색</td></tr></tbody></table>
+<blockquote>참고: 개발 도구(<code>node_modules</code>)가 없는 상태에서는 <code>data.test.js</code>가 <code>topojson-client</code>를 찾지 못해 실패합니다. <code>npm ci</code>(또는 <code>npm install</code>)를 먼저 실행해야 합니다.</blockquote>
+<h3>화면 확인</h3>
+<ul><li>Phase마다 Playwright로 데스크톱 1440px·모바일 390px 캡처를 시안과 비교하고, 콘솔 오류 0을 확인했습니다.</li><li>PRD의 시나리오(예: 교토·오사카 여행 추가 → 일본 방문 2회 → 통계 반영)를 그대로 따라 했습니다.</li><li>AI 흐름은 OpenRouter 응답을 가짜로 바꿔 비용 0원으로 전체를 확인했습니다(429 실패·형식 오류 재요청·캐시 포함).</li><li>오프라인: 서비스 워커 캐시 376개 → 네트워크를 끊고 새로 고침해도 지도·검색·색칠·시군구 지도 동작.</li></ul>
+</section>
+<section id="sec-10"><h2>10. 배포</h2>
+<ul><li>GitHub 저장소: <code>https://github.com/poguni/voyage-atlas</code></li><li>GitHub Pages(<code>main</code> 브랜치 루트, 빌드 없음): <strong><a href="https://poguni.github.io/voyage-atlas/">https://poguni.github.io/voyage-atlas/</a></strong> (2026-10-17 응답 200 확인)</li><li>커밋·푸시는 사용자가 직접 합니다. 각 Phase 끝에 추천 커밋 메시지(<code>feat(map): …</code>, <code>docs: …</code>)와 <code>git add</code> 대상을 안내했습니다.</li><li>로컬 실행: <code>npm install</code> → <code>npm start</code>(<a href="http://localhost:8080">http://localhost:8080</a>). <code>file://</code>로는 ES 모듈이 동작하지 않습니다.</li></ul>
+</section>
+<section id="sec-11"><h2>11. 알려진 한계</h2>
+<ul><li><strong>기기 간 동기화 없음</strong>: 다른 기기로 옮기려면 JSON 백업을 직접 옮겨야 합니다.</li><li><strong>3D 지구본 첫 표시가 느릴 수 있음</strong>: 그래픽 가속이 없는 시험 브라우저에서 약 14초. 실기기 확인이 필요합니다. 덜 자세한 지도를 쓰면 빨라지지만 제주도가 빠집니다.</li><li><strong>트립픽에 가져오기 기능이 아직 없음</strong>: 지금은 제외 조건 문장을 복사해 붙여 넣는 방식만 바로 쓸 수 있습니다.</li><li><strong>실기기 확인 남음</strong>: 사파리(iOS)·삼성 인터넷의 공유 창과 한글 글꼴, 실제 API 키로 AI 1회 실행(약 $0.03).</li><li><strong>저장 지연</strong>: 마지막 변경 0.15초 안에 새로 고침하면 그 변경이 빠질 수 있습니다.</li><li><strong>작은 마을 누락</strong>: 인구 1천 미만 마을(할슈타트 등)은 도시 데이터에 없습니다.</li><li><strong>오프라인 글꼴</strong>: 한글 글꼴은 화면에 나온 글자 조각만 캐시해서, 오프라인에서 처음 보는 글자는 기본 글꼴로 보일 수 있습니다. 3D는 온라인일 때 한 번 열어 두어야 오프라인에서 열립니다.</li><li><strong>위시 자유 장소</strong>: 지도에서 위치를 직접 찍지 못하고, 가까운 도시·나라 + 표시 이름 방식입니다.</li><li><strong>휴대폰 지도 화면의 3단계 하단 시트 미적용</strong>(패널만 하단 시트).</li><li><strong>빠른 색칠 + 두 번 누르기</strong>: 시도를 두 번 누르면 색칠이 켜졌다 꺼진 뒤 시군구로 바뀝니다(위쪽 전환 버튼 권장).</li><li><strong>대표 사진은 장소마다 1장</strong>, 여행별 사진은 없습니다.</li></ul>
+</section>
+<section id="sec-12"><h2>12. 향후 개선 아이디어 / 업데이트 계획</h2>
+<h3>다음에 하면 좋을 것 (Phase 6 남은 것과 미룬 것)</h3>
+<ol><li><strong>AI 여행 성향 분석(F7-11)</strong>: 기록을 바탕으로 "자연·도시·미식" 같은 성향 카드. 이미 만든 이력 요약(메모 제외)을 재사용할 수 있습니다.</li><li><strong>재미 배지(F5-5)</strong>: 남반구, 적도 넘기, 섬 수집가, 10년의 여정(시안에 디자인 있음).</li><li><strong>인쇄용 SVG/PDF(F8-11)</strong>: A3 PNG에 더해 벡터 출력.</li><li><strong>시군구 정복률(F4-4 P1)</strong>: 5d·5e에서 두 번 미룸. 한국 HUD에 "시군구 n/230".</li><li><strong>3D 지구본 실기기 성능 확인</strong>: 느리면 처음엔 110m로 그리고 뒤에서 50m로 바꾸는 방식(2D 지도와 같은 전략)을 검토.</li></ol>
+<h3>여유가 있으면</h3>
+<ul><li><strong>트립픽 쪽 가져오기 기능</strong>: 지금 만든 JSON(<code>{ name, country, region, code, note }</code>)을 그대로 읽게 하면 위시 → 트립픽 후보가 한 번에 넘어갑니다.</li><li><strong>저장 지연 보완</strong>: <code>pagehide</code>/<code>visibilitychange</code> 때 바로 저장해서 0.15초 사이 새로 고침 손실을 막기.</li><li><strong>위시 자유 장소의 위치 찍기</strong>: 지도를 눌러 좌표를 정하는 모드.</li><li><strong>휴대폰 3단계 하단 시트</strong>: 지도를 크게 보면서 HUD를 끌어올리는 방식(DESIGN 5.4).</li><li><strong>여행 카드 날짜 표시</strong>: 앞서 미뤄 둔 항목.</li><li><strong>E2E 테스트 자동화</strong>: 지금은 Phase마다 Playwright로 손으로 확인합니다. 시나리오 B 같은 핵심 흐름을 스크립트로 남기면 회귀를 잡기 쉽습니다.</li></ul>
+<h3>아이디어 수준</h3>
+<ul><li>기기 간 자동 동기화(예: 사용자 소유 클라우드 파일에 백업 저장). 현재 Non-goal이므로 필요할 때 다시 결정.</li><li>여행별 사진 여러 장과 공유 템플릿에 사진 넣기.</li><li>연대기 재생을 짧은 동영상(WebM)으로 저장해 공유.</li><li>국가 수 기준 선택(UN 195 / 지역 포함 등) 설정.</li></ul>
+</section>
+  </main>
+</div>
+<script>
+  const links = document.querySelectorAll('nav.sidebar a');
+  const sections = [...links].map(a => document.querySelector(a.getAttribute('href')));
+  const setActive = (id) => links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => { if (entry.isIntersecting) setActive(entry.target.id); });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach((el) => el && observer.observe(el));
+</script>
+</body>
+</html>
