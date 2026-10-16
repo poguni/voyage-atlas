@@ -23,7 +23,8 @@ const grain = () => (motionReduced() ? null : 'url(#grain)');
  *   onBackground (event) => void  땅·마커가 아닌 곳을 눌렀을 때
  */
 export function createMap(container, o) {
-  container.querySelectorAll('.map-svg').forEach(n => n.remove());
+  // 보기 전환 연출 중인 이전 지도(data-keep)는 남겨 둡니다.
+  container.querySelectorAll('.map-svg:not([data-keep])').forEach(n => n.remove());
   const w = container.clientWidth, h = container.clientHeight;
   if (!w || !h) return null;
 
@@ -102,6 +103,20 @@ export function createMap(container, o) {
 
   // 지도 좌표 → 상자 안 화면 좌표(현재 확대 반영)
   m.toScreen = xy => d3.zoomTransform(svg.node()).apply(xy);
+  m.screenBox = ([a, b]) => [m.toScreen(a), m.toScreen(b)];
+
+  // 보기 전환(F1-8): 지도 좌표 영역 src가 화면 영역 dst에 오도록 확대·이동(ms = 0이면 바로)
+  m.fitBox = ([[x0, y0], [x1, y1]], [[X0, Y0], [X1, Y1]], ms = 750) => {
+    const k = Math.min((X1 - X0) / (x1 - x0), (Y1 - Y0) / (y1 - y0));
+    const t = d3.zoomIdentity.translate((X0 + X1) / 2 - k * (x0 + x1) / 2, (Y0 + Y1) / 2 - k * (y0 + y1) / 2).scale(k);
+    if (!ms) { svg.call(zoom.transform, t); return Promise.resolve(); }
+    return run(s => s.call(zoom.transform, t), ms);
+  };
+  // 지금 확대 상태를 반영한 투영 값(지구본 접기 연출의 출발·도착점)
+  m.zoomSpec = () => {
+    const t = d3.zoomTransform(svg.node()), [tx, ty] = proj.translate();
+    return { scale: proj.scale() * t.k, translate: [tx * t.k + t.x, ty * t.k + t.y], rotate: proj.rotate() };
+  };
 
   m.destroy = () => { svg.interrupt().on('.zoom', null); hideTip(); svg.remove(); };
   return m;

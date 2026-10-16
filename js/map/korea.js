@@ -96,6 +96,10 @@ export async function koreaView(container, app) {
     return { el, xy: anchor.get(placeId), bounds: m.path.bounds(d3.select(el).datum()), mapId: placeId };
   };
 
+  // 보기 전환(F1-8): 지금 화면에서 대한민국(시도 전체)이 차지하는 영역
+  m.koreaBox = () => m.screenBox(m.path.bounds({ type: 'FeatureCollection', features: feats }));
+  m.resetView = () => m.reset();
+
   m.redraw();
   m.ready = Promise.resolve();
   return m;

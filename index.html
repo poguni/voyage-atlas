@@ -101,8 +101,9 @@
       <div class="seg" role="group" aria-label="지도 보기" id="viewSeg">
         <button type="button" data-view="world" aria-pressed="true">세계</button>
         <button type="button" data-view="korea" aria-pressed="false">대한민국</button>
-        <button type="button" data-view="globe" aria-pressed="false" disabled title="준비 중(Phase 5)">지구본</button>
+        <button type="button" data-view="globe" aria-pressed="false">지구본</button>
       </div>
+      <label class="switch spin-toggle" id="spinWrap" hidden><input type="checkbox" id="spinToggle" checked> 자전</label>
       <div class="search" role="search">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <input id="searchInput" type="search" placeholder="나라·도시 검색 (초성 ㅍㄹㅅ 가능)" autocomplete="off" spellcheck="false"

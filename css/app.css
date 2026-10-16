@@ -543,6 +543,17 @@ select.input{cursor:pointer}
 .model-row{display:grid;grid-template-columns:1fr;gap:6px}
 .set-fields{margin-top:14px}
 
+/* ---------- 지구본(DESIGN.md 7.6) ---------- */
+.map-svg.globe{cursor:grab}
+.map-svg.globe:active{cursor:grabbing}
+.map-svg .globe-sphere{fill:url(#ocean);stroke:var(--line);stroke-width:1}
+.map-svg.globe .land path{transition:fill .5s}
+.map-svg .globe-city{fill:var(--gold-strong);filter:url(#glow);cursor:default}
+.map-svg.globe .route{opacity:.75}
+.map-svg[data-keep]{position:absolute;inset:0;pointer-events:none}
+.spin-toggle{padding:0 8px;white-space:nowrap}
+.spin-toggle[hidden]{display:none}
+
 /* ---------- 배지·마일스톤(DESIGN.md 6.11·6.16) ---------- */
 .coin-svg{display:block}
 .badge-head{gap:10px}

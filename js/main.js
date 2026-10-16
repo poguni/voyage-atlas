@@ -13,6 +13,8 @@ import {
 import { registerPlaces, placeInfo, placeMeta, countryList, baseSearchItems, allSearchItems, loadCityItems } from './places.js';
 import { worldView } from './map/world.js';
 import { koreaView } from './map/korea.js';
+import { globeView } from './map/globe.js';
+import * as d3 from 'd3';
 import { scratch, particles } from './map/effects.js';
 import { drawSky } from './ui/sky.js';
 import { toast } from './ui/toast.js';
@@ -36,7 +38,7 @@ import { initAi, renderAi } from './screens/ai.js';
 import { initAiSettings, refreshPrices } from './ui/ai-settings.js';
 
 const $ = id => document.getElementById(id);
-const VIEWS = { world: worldView, korea: koreaView };
+const VIEWS = { world: worldView, korea: koreaView, globe: globeView };
 const ROUTES = ['home', 'trips', 'wish', 'ai', 'stats', 'share'];
 const TITLES = { home: '지도', trips: '여행 연대기', wish: '위시리스트', ai: 'AI 추천', stats: '통계', share: '공유 스튜디오' };
 const box = $('map');
@@ -98,6 +100,9 @@ const app = {
     openPopover({ placeId, el, xy, mapId }, popScreen, popoverView(placeId));
   },
   onZoomStart: () => closePopover(),
+  // 지구본: 자전 스위치, 팝오버가 열려 있으면 자전을 멈춤
+  spin: () => $('spinToggle').checked,
+  busy: () => !$('popover').hidden,
   onBackground: () => closePopover(),
   // 지도에 별로 띄울 위시(아직 방문 전). 세계 지도는 나라·도시, 한국 지도는 시도·시군구
   stars(view) {
@@ -113,7 +118,8 @@ function markVisited({ placeId, el, xy, mapId = placeId }, screen, { quick = fal
   // 긁을 땅이 아직 칠해지지 않았을 때만 긁기 연출(도시를 표시했는데 나라가 이미 방문함이면 생략)
   const landCount = visitCount(s, mapId);
   const level = levelClass(Math.max(1, mapId === placeId ? visitCount(s, placeId) : landCount));
-  const done = current && el?.isConnected && (mapId === placeId || !landCount)
+  // 지구본은 돌고 있어 금박 긁기 대신 파티클만
+  const done = current && current.view !== 'globe' && el?.isConnected && (mapId === placeId || !landCount)
     ? scratch(current, el, xy, level, { quick }) : Promise.resolve();
   particles(box.querySelector('.fx-canvas'), screen[0], screen[1], { n: quick ? 12 : 36 });
   const undo = setPlaceStatus(placeId, 'visited', { quick, meta: placeMeta(placeId) });
@@ -202,24 +208,61 @@ function updateEmpty() {
 }
 
 // ---------- 지도 보기 전환 ----------
+// 전환 연출(F1-8): 세계 ↔ 지구본은 평면이 둥글게 접히고, 한국으로 갈 때는 대한민국으로 날아가 시도 지도로 겹쳐 바뀝니다.
+const fade = (node, from, to, ms) => new Promise(res => {
+  d3.select(node).style('opacity', from).transition().duration(ms).style('opacity', to).on('end interrupt', () => res());
+});
+async function transition(prev, m, from, to) {
+  const a = prev.svg.node(), b = m.svg.node();
+  if (to === 'korea' || from === 'korea') {
+    const kv = to === 'korea' ? m : prev, other = to === 'korea' ? prev : m;
+    const target = kv.koreaBox();
+    b.style.opacity = 0;
+    if (to === 'korea') await other.flyToKorea(target, 850);
+    else await other.flyToKorea(target, 0);
+    await Promise.all([fade(b, 0, 1, 380), fade(a, 1, 0, 380)]);
+    if (from === 'korea') await other.resetView();
+  } else if (to === 'globe') {
+    const spec = prev.spec();
+    a.style.opacity = 0;
+    await m.morphFrom(spec, 1100);
+  } else {
+    b.style.opacity = 0;
+    await prev.morphTo(m.spec(), 1100);
+    b.style.opacity = 1; a.style.opacity = 0;
+  }
+  b.style.opacity = '';
+}
+
 async function show(name) {
+  const prev = current, from = prev?.view;
   viewName = name;
   try { localStorage.setItem('va-view', name); } catch { /* 무시 */ }
   closePopover();
   box.parentElement.dataset.view = name;   // 휴대폰에서 보기별 지도 높이(세계는 가로로 긴 비율)
   document.querySelectorAll('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === name)));
-  for (const [id, v] of [['legendWorld', 'world'], ['legendKorea', 'korea'], ['hudWorld', 'world'], ['hudKorea', 'korea']]) $(id).hidden = name !== v;
+  const hudView = name === 'korea' ? 'korea' : 'world';   // 지구본은 세계 HUD·범례
+  for (const [id, v] of [['legendWorld', 'world'], ['legendKorea', 'korea'], ['hudWorld', 'world'], ['hudKorea', 'korea']]) $(id).hidden = hudView !== v;
+  $('spinWrap').hidden = name !== 'globe';
 
   const my = ++seq;
-  current?.destroy();
+  // 같은 크기의 지도에서 보기만 바꿀 때만 연출(창 크기가 바뀌어 다시 그릴 때는 생략)
+  const animate = !!prev && from !== name && !motionReduced() && prev.w === box.clientWidth && prev.h === box.clientHeight;
   current = null;
+  if (animate) prev.svg.node().dataset.keep = '1'; else prev?.destroy();
   try {
     const m = await VIEWS[name](box, app);
-    if (my !== seq) { m?.destroy(); return; }
+    if (my !== seq) { m?.destroy(); if (animate) prev.destroy(); return; }
+    if (animate && m) {
+      try { await transition(prev, m, from, name); } catch (err) { console.error(err); }
+      prev.destroy();
+      if (my !== seq) { m.destroy(); return; }
+    }
     current = m;
     mapSize = `${box.clientWidth}x${box.clientHeight}`;
     box.querySelectorAll('.map-skeleton, .map-error').forEach(n => n.remove());
     introOnce(m);
+    m?.intro?.();
     renderListPanel();
   } catch (err) {
     console.error(err);
@@ -271,7 +314,9 @@ function goTrip(id) {
 async function focusPlace(placeId) {
   const info = placeInfo(placeId);
   if (route !== 'home') { location.hash = '#home'; await go('home'); }
-  if (info.view !== viewName) await show(info.view);
+  // 지구본에서 나라·도시를 찾으면 지구본을 돌려서 보여 줌
+  const want = info.view === 'world' && viewName === 'globe' ? 'globe' : info.view;
+  if (want !== viewName) await show(want);
   if (!current) return;
   await current.ready;
   const t = current.target(placeId);
@@ -354,7 +399,7 @@ async function start() {
   onSettings(() => {
     checkBadges({ quiet: true });
     renderHuds(false);
-    current?.land.attr('filter', motionReduced() ? null : 'url(#grain)');
+    if (current?.view !== 'globe') current?.land.attr('filter', motionReduced() ? null : 'url(#grain)');
     if (route !== 'home') renderRoute();
   });
 

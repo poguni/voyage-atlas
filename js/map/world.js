@@ -23,15 +23,18 @@ function mainBounds(path, f) {
   return path.bounds(best);
 }
 
+// 나라 툴팁(DESIGN.md 7.7): 국기 + 한국어 이름 / 영어 이름 · 대륙 / 상태
+export const countryTipHTML = (c, statusText) => `<b>${flagHTML(c.iso2, c.ko, 16)}${esc(c.ko)}</b>`
+  + `<span class="dim">${esc(c.en)} · ${CONT[c.cont] ?? ''}</span><br>`
+  + `<span style="color:var(--gold-strong)">${esc(statusText(countryId(c.id)))}</span>`;
+
 /**
  * @param app { classFor(placeId), statusText(placeId), onPlace(e, placeId, el, xy), onZoomStart(), onBackground(), stars(view) }
  */
 export async function worldView(container, app) {
   const [{ list, byId }, topo110] = await Promise.all([loadCountries(), loadJSON('data/countries-110m.json')]);
   const pid = f => countryId(f.id);
-  const tipHTML = c => `<b>${flagHTML(c.iso2, c.ko, 16)}${esc(c.ko)}</b>`
-    + `<span class="dim">${esc(c.en)} · ${CONT[c.cont] ?? ''}</span><br>`
-    + `<span style="color:var(--gold-strong)">${esc(app.statusText(countryId(c.id)))}</span>`;
+  const tipHTML = c => countryTipHTML(c, app.statusText);
 
   const feats110 = toFeatures(topo110);
   const m = createMap(container, {
@@ -101,6 +104,14 @@ export async function worldView(container, app) {
     const bounds = el ? mainBounds(m.path, d3.select(el).datum()) : [[xy[0] - 4, xy[1] - 4], [xy[0] + 4, xy[1] + 4]];
     return { el, xy, bounds, mapId: placeId };
   };
+
+  // 보기 전환(F1-8): 지구본 접기 연출용 투영 값, 한국으로 날아가기·돌아오기
+  m.spec = () => ({ raw: d3.geoNaturalEarth1Raw, clip: null, ...m.zoomSpec() });
+  m.flyToKorea = (box, ms) => {
+    const k = m.pathOf(countryId('410'));
+    return k ? m.fitBox(mainBounds(m.path, d3.select(k).datum()), box, ms) : Promise.resolve();
+  };
+  m.resetView = () => m.reset();
 
   m.redraw();
 
