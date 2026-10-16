@@ -129,7 +129,7 @@ td:first-child{white-space:nowrap}
   <main>
     <header class="hero">
       <div class="eyebrow">VOYAGE ATLAS · IMPLEMENTATION PLAN</div>
-      <h1>나의 여정 지도(Voyage Atlas)<br><span class="gold">구현 계획서</span></h1>
+      <h1>나의 여정 지도(Voyage Atlas)<br><span class="gold">구현 계획서</span></h1>
       <ol class="phases" aria-label="Phase 0부터 6까지의 단계"><li><span class="ph-num">0</span><span class="ph-name">기반과 지도 데이터</span><span class="ph-m">M1 준비</span></li><li><span class="ph-num">1</span><span class="ph-name">지도와 색칠</span><span class="ph-m">M1</span></li><li><span class="ph-num">2</span><span class="ph-name">기록·통계·위시</span><span class="ph-m">M2</span></li><li><span class="ph-num">3</span><span class="ph-name">공유 이미지</span><span class="ph-m">M3</span></li><li><span class="ph-num">4</span><span class="ph-name">AI 추천</span><span class="ph-m">M4</span></li><li><span class="ph-num">5</span><span class="ph-name">성취와 연출</span><span class="ph-m">M5 · P1</span></li><li><span class="ph-num">6</span><span class="ph-name">확장</span><span class="ph-m">M6 · P2</span></li></ol>
     </header>
     <div class="table-wrap meta"><table>
@@ -141,7 +141,7 @@ td:first-child{white-space:nowrap}
 </thead>
 <tbody><tr>
 <td>문서 버전</td>
-<td>v1.8</td>
+<td>v1.9</td>
 </tr>
 <tr>
 <td>작성일</td>
@@ -976,7 +976,7 @@ td:first-child{white-space:nowrap}
 <td>F3-4~F3-6</td>
 </tr>
 <tr>
-<td>5d 지도 확장</td>
+<td>5d 지도 확장 ✅</td>
 <td>한국 시군구(두 번 클릭, 지연 로딩), 도시 핀(확대 수준별 라벨), 색칠 기준 전환</td>
 <td>F1-9~F1-11</td>
 </tr>
@@ -1101,6 +1101,43 @@ td:first-child{white-space:nowrap}
 <tr>
 <td>계획과 달라진 점</td>
 <td>재생 중 위쪽 HUD 숫자는 지금 기록 그대로 두고, 그해 숫자는 재생 막대에 보여 줌</td>
+</tr>
+</tbody></table>
+</div><h3>5d 진행 결과 (2026-10-16 완료)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>한국 시군구 지도(F1-9)</td>
+<td>대한민국 보기 위쪽에 [시도 · 시군구] 전환(시안 02). 시도를 두 번 누르면 시군구 지도로 바뀌고 그 시도로 확대. 시군구 경계(397KB)는 처음 열 때 불러오고, 구가 있는 시(수원시 등)는 한 칸으로 합쳐 230곳(도시 검색의 시군구와 같은 코드). 시군구 0.4px, 시도 경계 1.2px, 시군구 이름은 3배 이상 확대하고 화면에서 충분히 커졌을 때만 표시. 독도는 울릉군으로 연결. 고른 단위는 기억함</td>
+</tr>
+<tr>
+<td>시도 자동 방문(F2-8)</td>
+<td>시군구를 방문함으로 표시하면 그 시도도 방문(팝오버에 &quot;안에 있는 시군구를 방문해서…&quot; 안내)</td>
+</tr>
+<tr>
+<td>도시 핀(F1-10)</td>
+<td>세계 지도에 다녀온 도시, 시도 지도에 다녀온 시군구를 금테 점으로 표시(누르면 팝오버). 이름은 확대해야 보이고, 많이 간 도시일수록 먼저 보임. 전체 연대기 재생 중에는 그해까지 간 도시만</td>
+</tr>
+<tr>
+<td>색칠 기준 전환(F1-11)</td>
+<td>범례 앞의 [색칠 기준] 선택: 방문 횟수(기본) / 상태(방문함 한 색) / 마지막 방문 연도(최근일수록 밝게, 해가 5개 넘으면 5구간, 날짜 없는 표시는 &#39;날짜 모름&#39;) / 동행 유형(가장 많이 함께한 유형, 같으면 최근 여행). 범례가 기준에 맞게 바뀌고, 고른 기준은 기억함. 지도 홈에만 적용(연대기·상세의 작은 지도는 방문 횟수 그대로)</td>
+</tr>
+<tr>
+<td>테스트</td>
+<td>76개 통과(시군구 자동 방문·코드 합치기·지도 핀·마지막 방문 연도·주된 동행·연도 구간 5개 추가)</td>
+</tr>
+<tr>
+<td>브라우저 확인</td>
+<td>강원 두 번 클릭 → 시군구 지도 + 강원 확대, 속초 클릭 → 긁기 → 방문 저장(시도 코드 포함), 독도 → 울릉군, &#39;해운대&#39; 검색 → 시군구 지도에서 팝오버, 시도 지도의 강릉·속초·해운대 핀, 세계 지도 도쿄·교토·파리·로마·뉴욕 핀(확대 시 이름), 연도·동행·상태 기준 색과 범례, 연대기 재생 2019 → 도쿄·교토만, 2022 → 파리·로마 추가. 1440·390px, 콘솔 오류 0</td>
+</tr>
+<tr>
+<td>계획과 달라진 점</td>
+<td>① 시도 경계선은 <code>--foil-edge</code>가 금박 위에서 보이지 않아 어두운 선으로 ② 빠른 색칠을 켠 채 두 번 누르면 색칠이 켜졌다 꺼진 뒤 시군구로 바뀜(위쪽 전환 버튼 사용 권장) ③ 시군구 정복률(F4-4 P1)은 HUD에 아직 넣지 않음(5e 통계 확장 때 검토)</td>
 </tr>
 </tbody></table>
 </div><p>커밋은 묶음마다 하나씩 권합니다. 예: <code>feat(badges): 마일스톤 배지와 축하 연출</code>, <code>feat(map): 2D 지구본과 투영 전환</code>, <code>feat(pwa): 서비스 워커 오프라인 캐시</code>. 모두 끝나면 태그 <code>v1.0.0</code>.</p>
