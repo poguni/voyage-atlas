@@ -8,8 +8,14 @@ import { loadJSON } from '../data.js';
 import { placeInfo } from '../places.js';
 import { countryOf, sidoOf, isCountry, isSido } from '../stats.js';
 import { getState } from '../store.js';
+import { settings, onSettings } from '../settings.js';
+import { AIRPORTS } from '../ai/config.js';
 
-export const HOME_AIRPORT = { code: 'ICN', name: '인천', ll: [126.45, 37.46] };   // 설정(Phase 4)에서 바꿀 수 있게 될 예정
+// 홈 공항(설정 F10-3): 설정이 바뀌면 같은 객체의 값만 바꿉니다.
+export const HOME_AIRPORT = {};
+const syncHome = () => { const code = AIRPORTS[settings.homeAirport] ? settings.homeAirport : 'ICN'; Object.assign(HOME_AIRPORT, { code, ...AIRPORTS[code] }); };
+syncHome();
+onSettings(syncHome);
 
 const worldFeats = async (res = '50m') => { const t = await loadJSON(`data/countries-${res}.json`); return feature(t, t.objects.countries).features; };
 const koreaFeats = async () => { const t = await loadJSON('data/korea-sido.json'); return feature(t, t.objects.sido).features; };

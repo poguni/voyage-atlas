@@ -1,6 +1,7 @@
-// 앱 설정(localStorage, PRD 10.1): 테마, 애니메이션 줄이기, 경유 통계 포함
+// 앱 설정(localStorage, PRD 10.1): 테마, 애니메이션 줄이기, 경유 통계 포함, 홈 공항, 환율, AI 모델 슬러그·단가
+// API 키는 여기에 두지 않습니다(ai/openrouter.js).
 const KEY = 'va-settings';
-const DEFAULTS = { reduceMotion: false, includeTransit: false };
+const DEFAULTS = { reduceMotion: false, includeTransit: false, homeAirport: 'ICN', fxRate: 1400, aiSlugs: {}, aiPrices: {} };
 const MEDIA = matchMedia('(prefers-reduced-motion: reduce)');
 const subs = new Set();
 
