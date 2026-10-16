@@ -8,7 +8,7 @@ import { loadJSON } from '../data.js';
 import { placeInfo } from '../places.js';
 import { countryOf, sidoOf, isCountry, isSido } from '../stats.js';
 import { getState } from '../store.js';
-import { settings, onSettings } from '../settings.js';
+import { settings, onSettings, motionReduced } from '../settings.js';
 import { AIRPORTS } from '../ai/config.js';
 
 // 홈 공항(설정 F10-3): 설정이 바뀌면 같은 객체의 값만 바꿉니다.
@@ -75,18 +75,50 @@ export async function drawRouteMap(container, trip, { classFor, onPlace }) {
   m.setFeatures(feats);
 
   // 대권 곡선(d3.geoPath는 LineString을 대권으로 그립니다)
+  const legs = [];
   for (let i = 1; i < seq.length; i++) {
     const leg = { type: 'LineString', coordinates: [seq[i - 1], seq[i]] };
     m.routes.append('path').attr('class', 'route-shadow').attr('d', m.path(leg));
-    m.routes.append('path').attr('class', 'route').attr('d', m.path(leg));
+    legs.push(m.routes.append('path').attr('class', 'route').attr('d', m.path(leg)));
   }
+  const plane = m.routes.append('path').attr('class', 'plane').attr('d', PLANE).style('display', 'none');
   if (!isKorea) label(dot(m, HOME_AIRPORT.ll, 'route-home'), HOME_AIRPORT.code, true);
   stops.forEach((s, i) => {
     const g = dot(m, s.info.ll, 'route-stop', 6);
     label(g, `${i + 1} ${s.info.name}`, i % 2 === 1);
     g.style('cursor', 'pointer').on('click', e => { e.stopPropagation(); onPlace?.(s.placeId); });
   });
-  return { m, domestic: isKorea };
+  return { m, domestic: isKorea, play: () => replay(m, legs, plane) };
+}
+
+// 비행기 아이콘(오른쪽을 향함)
+const PLANE = 'M-8 0 L6 -1.6 L9 0 L6 1.6 Z M-2 -1 L-5 -7 L-2 -7 L3 -1 Z M-2 1 L-5 7 L-2 7 L3 1 Z';
+
+/**
+ * 경로 다시 보기(PRD F3-4, DESIGN 7.5): 구간마다 1.1초 동안 선이 그려지고 비행기가 진행 방향으로 돌며 따라갑니다.
+ * 그동안 흐린 그림자 선으로 전체 경로가 보입니다. 애니메이션 줄이기면 바로 끝난 모습.
+ */
+function replay(m, legs, plane) {
+  const clear = el => el.interrupt().attr('stroke-dasharray', null).attr('stroke-dashoffset', null);
+  legs.forEach(clear);
+  if (motionReduced() || !legs.length) return Promise.resolve();
+  legs.forEach(el => { const L = el.node().getTotalLength(); el.attr('stroke-dasharray', `${L} ${L}`).attr('stroke-dashoffset', L); });
+  plane.style('display', null);
+  return new Promise(res => {
+    const done = () => { plane.style('display', 'none'); legs.forEach(clear); res(); };
+    const next = i => {
+      if (i >= legs.length) return done();
+      const el = legs[i], node = el.node(), L = node.getTotalLength();
+      el.transition().duration(1100).ease(d3.easeCubicInOut).attr('stroke-dashoffset', 0)
+        .tween('plane', () => t => {
+          const a = node.getPointAtLength(Math.max(0, t * L - 1)), b = node.getPointAtLength(Math.min(L, t * L + 1));
+          plane.attr('transform', `translate(${b.x},${b.y}) rotate(${Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI}) scale(${1.4 / m.k})`);
+        })
+        .on('end', () => next(i + 1))
+        .on('interrupt', done);
+    };
+    next(0);
+  });
 }
 
 /**

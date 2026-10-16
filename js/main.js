@@ -33,6 +33,7 @@ import { initWish, renderWish } from './screens/wish.js';
 import { initStats, renderStats } from './screens/stats-view.js';
 import { initShare, renderShare } from './screens/share.js';
 import { initMilestone, celebrate } from './ui/milestone.js';
+import { initTimelapse, startTimelapse, stopTimelapse, frameState } from './ui/timelapse.js';
 import { newlyEarned, nextGoals, headline, metrics } from './badges.js';
 import { initAi, renderAi } from './screens/ai.js';
 import { initAiSettings, refreshPrices } from './ui/ai-settings.js';
@@ -60,7 +61,7 @@ const isSimple = placeId => getState().places[placeId]?.status === 'visited'
   && !getState().trips.some(t => tripStarted(t) && (t.stops ?? []).some(s => s.placeId === placeId));
 
 function classFor(placeId) {
-  const s = getState();
+  const s = frameState() ?? getState();   // 전체 연대기 재생 중에는 그해까지의 기록으로
   const n = visitCount(s, placeId);
   if (n) return levelClass(n);
   const wish = isWished(s, placeId) ? ' wishc' : '';
@@ -291,6 +292,7 @@ function renderRoute() {
 async function go(name) {
   route = ROUTES.includes(name) ? name : 'home';
   closePopover();
+  if (route !== 'home') stopTimelapse();
   document.querySelectorAll('.screen').forEach(sc => { sc.hidden = sc.id !== route; });
   document.querySelectorAll('#tabbar a[data-tab]').forEach(a => {
     if (a.dataset.tab === route) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
@@ -364,7 +366,8 @@ async function start() {
   initWishForm();
   const openTrip = opts => openTripForm({ onSaved: afterTripSaved, ...opts });
   initPlaceDetail({ classFor, openTripForm: openTrip, openWishForm, goTrip });
-  initTrips({ classFor, openTripForm: openTrip, openPlace: openPlaceDetail });
+  initTrips({ classFor, openTripForm: openTrip, openPlace: openPlaceDetail, startTimelapse: async () => { location.hash = '#home'; await go('home'); startTimelapse(); } });
+  initTimelapse({ redraw: () => current?.redraw() });
   initWish({ classFor, openWishForm, openTripForm: openTrip, openPlace: openPlaceDetail });
   initStats({ openPlace: openPlaceDetail, goTrip });
   initShare();

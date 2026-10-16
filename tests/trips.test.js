@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   tripDays, daysSummary, daysByYear, isDomestic, visitCount, countryRanking, recordFacts, placeVisits,
-  dday, tripStarted, countriesInYear, tripYears,
+  dday, tripStarted, countriesInYear, tripYears, timelapseYears, stateUntil, countryStats,
 } from '../js/stats.js';
 import { emptyState } from '../js/backup.js';
 
@@ -103,4 +103,20 @@ test('D-day: 날짜와 연·월 목표', () => {
   assert.equal(dday('2026-10-15', '2026-10-15'), 0);
   assert.equal(dday('2026-11', '2026-10-15'), 17);
   assert.equal(dday(null, '2026-10-15'), null);
+});
+
+test('전체 연대기 재생: 첫 여행 해부터 올해까지, 그해까지의 여행만 색칠, 날짜 없는 표시는 마지막 장면에서', () => {
+  const s = S({
+    places: { 'country:620': { status: 'visited' }, ...kyoto },
+    trips: [trip('a', '2019-05-01', '2019-05-03', ['city:1857910']), trip('b', '2022-08-01', '2022-08-05', ['country:250']), trip('f', '2027-01-01', '2027-01-02', ['country:380'])],
+  });
+  assert.deepEqual(timelapseYears(s, TODAY), [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]);
+  const at = y => countryStats(stateUntil(s, y, { today: TODAY }), countries).visited;
+  assert.equal(at(2019), 1);                                              // 일본
+  assert.equal(at(2021), 1);
+  assert.equal(at(2022), 2);                                              // + 프랑스
+  assert.equal(at(2026), 2);                                              // 포르투갈(날짜 없는 표시)·미래 이탈리아는 아직
+  assert.equal(countryStats(stateUntil(s, 2026, { final: true, today: TODAY }), countries).visited, 3);
+  assert.equal(stateUntil(s, 2019, { today: TODAY }).places['city:1857910'].countryId, '392');   // 도시 정보는 남김
+  assert.deepEqual(timelapseYears(S(), TODAY), []);
 });

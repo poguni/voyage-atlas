@@ -361,6 +361,21 @@ h2{margin:0;font-size:18px;font-weight:700}
 .empty-trip p{margin:0;font-size:14px;line-height:1.6}
 .map-svg .route-home{fill:var(--v1);stroke:var(--bg);stroke-width:2;vector-effect:non-scaling-stroke}
 .map-svg .route-stop{fill:var(--v4);stroke:var(--bg);stroke-width:2;vector-effect:non-scaling-stroke}
+.map-svg .plane{fill:var(--gold-strong);filter:url(#glow);pointer-events:none}
+.btn[hidden]{display:none}
+/* 전체 연대기 재생(F3-5) */
+.timelapse{left:50%;bottom:104px;transform:translateX(-50%);width:min(620px,calc(100% - 40px));display:flex;align-items:center;gap:16px;padding:12px 16px;z-index:12}
+.timelapse[hidden]{display:none}
+.tl-year{display:flex;flex-direction:column;min-width:96px}
+.tl-year .num{font-size:34px;line-height:1;color:var(--gold-strong)}
+.tl-year small{font-size:12px;margin-top:4px}
+.tl-track{flex:1;min-width:0}
+.tl-track input{width:100%;accent-color:var(--gold)}
+.tl-ends{display:flex;justify-content:space-between;gap:8px;font-size:11px}
+.replay-btn{position:absolute;top:12px;right:12px;z-index:2}
+.trip-dday{display:flex;align-items:flex-end;gap:10px;margin-top:12px}
+.trip-dday .num{font-size:40px;color:var(--wish);line-height:1}
+.trip-dday .dim{padding-bottom:4px;font-size:13px}
 
 /* ---------- 위시리스트(시안 06, DESIGN.md 6.12) ---------- */
 .map-card{padding:0;overflow:hidden}
@@ -615,6 +630,12 @@ select.input{cursor:pointer}
   .wish-map{height:240px}
   .ai-stage > .map-wrap{right:0;order:1;height:min(56vh,calc(56vw + 40px));min-height:240px}
   .ai-cond,.ai-list{inset:auto}
+  .timelapse{inset:auto;transform:none;width:auto;gap:10px;flex-wrap:wrap}
+  .tl-track{order:3;flex-basis:100%}
+  #tlClose{margin-left:auto}
+  #home .hud,#home .legend{order:1}   /* 재생 막대가 지도 바로 아래에 오도록 */
+  .tl-year{min-width:74px}
+  .tl-year .num{font-size:26px}
   .ai-cond{order:0;max-width:none}
   .ai-title{font-size:24px}
   .ai-list{order:2;width:auto;margin-bottom:96px}

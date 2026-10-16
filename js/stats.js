@@ -221,3 +221,24 @@ export function placeVisits(state, placeId, today = todayStr()) {
   const dated = trips.filter(t => t.start).map(t => t.start).sort();
   return { trips, first: dated[0] ?? null, last: dated.at(-1) ?? null };
 }
+
+// ---------- 전체 연대기 재생(F3-5) ----------
+// 재생할 연도: 날짜 있는 지난 여행의 첫 해 ~ 올해. 여행이 없으면 빈 배열
+export function timelapseYears(state, today = todayStr()) {
+  const ys = (state.trips ?? []).filter(t => t.start && tripStarted(t, today)).map(tripYear);
+  if (!ys.length) return [];
+  const out = [];
+  for (let y = Math.min(...ys), last = +today.slice(0, 4); y <= last; y++) out.push(y);
+  return out;
+}
+
+// 그해 말까지 다녀온 여행만 남긴 기록. 날짜 없는 방문 표시·여행은 마지막(final) 장면에서만 보입니다.
+export function stateUntil(state, year, { final = false, today = todayStr() } = {}) {
+  if (final) return state;
+  const places = Object.fromEntries(Object.entries(state.places ?? {}).map(([id, p]) => {
+    const { status: _s, quickMarked: _q, ...rest } = p;
+    return [id, rest];
+  }));
+  const trips = (state.trips ?? []).filter(t => t.start && tripStarted(t, today) && tripYear(t) <= year);
+  return { ...state, places, trips };
+}

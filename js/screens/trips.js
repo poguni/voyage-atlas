@@ -1,4 +1,5 @@
-// 여행 연대기 화면(시안 05, PRD F3): 연도별 타임라인 + 선택한 여행 카드(경로 지도, 경유지, 메모)
+// 여행 연대기 화면(시안 05, PRD F3): 연도별 타임라인 + 선택한 여행 카드(경로 지도·경로 다시 보기, 경유지, 메모)
+// 여행을 새로 고르면 경로를 한 번 재생하고(F3-4), 다가오는 여정은 D-day를 크게 보여 줍니다(F3-6).
 import { getState } from '../store.js';
 import { tripStarted, isUpcoming, daysSummary, dday, tripYear, tripDays, todayStr, COMPANIONS } from '../stats.js';
 import { fmtRange, fmtTripMeta, fmtStars, colorVar } from '../format.js';
@@ -7,14 +8,17 @@ import { placeInfo } from '../places.js';
 import { esc } from '../env.js';
 
 const $ = id => document.getElementById(id);
-let ctx = null;          // { classFor, openTripForm, openPlace }
+let ctx = null;          // { classFor, openTripForm, openPlace, startTimelapse }
 let selected = null;     // 선택한 여행 ID
 let order = 'desc';      // 최신순 / 오래된순
 let mapReq = 0;
+let route = null;        // 지금 그린 경로 지도({ play })
+let played = null;       // 경로를 자동으로 재생한 여행 ID(상태가 바뀌어 다시 그릴 때는 재생하지 않음)
 
 export function initTrips(c) {
   ctx = c;
   $('addTripBtn').addEventListener('click', () => ctx.openTripForm({ onSaved: t => { selected = t.id; } }));
+  $('replayAllBtn').addEventListener('click', () => ctx.startTimelapse());
   $('tripsOrder').addEventListener('click', e => {
     const b = e.target.closest('button[data-order]');
     if (!b) return;
@@ -32,6 +36,7 @@ export function initTrips(c) {
     if (!b || !t) return;
     if (b.dataset.place) return ctx.openPlace(b.dataset.place);
     if (b.dataset.act === 'edit') ctx.openTripForm({ trip: t });
+    if (b.dataset.act === 'replay') route?.play();
     if (b.dataset.act === 'add') ctx.openTripForm({ onSaved: x => { selected = x.id; } });
   });
 }
@@ -47,6 +52,7 @@ function tripButton(t, withYear, extra = '') {
 export function renderTrips() {
   const s = getState(), today = todayStr();
   const past = s.trips.filter(t => tripStarted(t, today));
+  $('replayAllBtn').hidden = !past.some(t => t.start);
   const upcoming = s.trips.filter(t => isUpcoming(t, today)).sort((a, b) => a.start.localeCompare(b.start));
   const days = daysSummary(s, { today }).total;
   $('tripsTitle').innerHTML = past.length
@@ -85,6 +91,7 @@ function renderDetail(t, today) {
     return;
   }
   const days = tripDays(t);
+  const upcoming = isUpcoming(t, today) ? dday(t.start, today) : 0;
   const eyebrow = [fmtRange(t, true), days ? `${days}일` : '', COMPANIONS[t.companion], t.partySize > 1 ? `${t.partySize}명` : '',
     isUpcoming(t, today) ? `D-${dday(t.start, today)}` : ''].filter(Boolean).join(' · ');
   const stops = t.stops.map(s => ({ id: s.placeId, info: placeInfo(s.placeId) }));
@@ -99,7 +106,8 @@ function renderDetail(t, today) {
     <div class="trip-card-head"><div><div class="eyebrow">${esc(eyebrow)}</div><h2 class="trip-title">${esc(t.title)}</h2></div>
       <span class="spacer"></span>${t.rating ? `<span class="trip-stars" aria-label="별점 ${t.rating}점">${fmtStars(t.rating)}</span>` : ''}
       <button class="btn btn-sm" type="button" data-act="edit">편집</button></div>
-    <div class="trip-map" id="tripMap"></div>
+    ${upcoming ? `<div class="trip-dday"><span class="num">D-${upcoming}</span><span class="dim">출발까지 ${upcoming}일</span></div>` : ''}
+    <div class="trip-map" id="tripMap"><button class="btn btn-sm replay-btn" type="button" data-act="replay">▶ 경로 다시 보기</button></div>
     <div class="trip-stops">${chips}</div>
     ${domesticLike ? '<p class="faint trip-hint">국내 여행은 대한민국 지도에서 경유 순서대로 보여 줘요.</p>' : ''}
     ${t.note ? `<p class="trip-note">“${esc(t.note)}”</p>` : ''}
@@ -109,7 +117,9 @@ function renderDetail(t, today) {
   requestAnimationFrame(async () => {
     const el = $('tripMap');
     if (!el || my !== mapReq) return;
-    try { await drawRouteMap(el, t, { classFor: ctx.classFor, onPlace: ctx.openPlace }); }
-    catch (err) { console.error(err); el.innerHTML = '<p class="map-error">경로 지도를 그리지 못했어요.</p>'; }
+    try {
+      route = await drawRouteMap(el, t, { classFor: ctx.classFor, onPlace: ctx.openPlace });
+      if (my === mapReq && route && played !== t.id) { played = t.id; route.play(); }
+    } catch (err) { console.error(err); el.innerHTML = '<p class="map-error">경로 지도를 그리지 못했어요.</p>'; }
   });
 }
