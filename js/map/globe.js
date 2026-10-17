@@ -96,7 +96,7 @@ export async function globeView(container, app) {
     }).filter(s => s.ll);
   }
 
-  let routeShadow, routeLine, cityDots, home, starSel;
+  let routeShadow, routeLine, cityDots, home, starSel, hitRing = null;
   function build() {
     routes.selectAll('*').remove(); points.selectAll('*').remove(); pins.selectAll('*').remove();
     routeShadow = routes.selectAll('.route-shadow').data(arcs).join('path').attr('class', 'route-shadow');
@@ -126,6 +126,7 @@ export async function globeView(container, app) {
     cityDots.each(function (d) { at(d3.select(this), d.ll); });
     at(home, HOME_AIRPORT.ll);
     starSel.forEach(({ s, g }) => at(g, s.ll));
+    if (hitRing) at(hitRing, hitRing.datum());
   }
 
   m.refresh = () => {
@@ -219,6 +220,25 @@ export async function globeView(container, app) {
     if (!ll) return null;
     const mapId = c ? placeId : countryId(info.countryId);
     return { el: m.pathOf(mapId), xy: C0, bounds: ll, mapId };
+  };
+  // 검색으로 찾은 곳 강조(engine.js와 같음). 고리는 지구본이 돌아도 따라가도록 draw()에서 경위도로 놓습니다.
+  m.spotlight = ({ el, bounds: ll }, ring) => {
+    m.clearSpotlight();
+    if (el) {
+      sel.filter(function () { return this.dataset.id === el.dataset.id; }).attr('data-hit', '').raise();
+      svg.classed('spot', true);
+    }
+    if (ring) {
+      hitRing = svg.append('g')   // pins는 다시 그릴 때 비우므로 맨 위에 따로.attr('class', 'hit-ring').datum(ll);
+      hitRing.append('circle').attr('class', 'pulse').attr('r', 12);
+      hitRing.append('circle').attr('class', 'hit-dot').attr('r', 5);
+      draw();
+    }
+  };
+  m.clearSpotlight = () => {
+    svg.classed('spot', false);
+    sel.filter('[data-hit]').attr('data-hit', null);
+    hitRing?.remove(); hitRing = null;
   };
   m.zoomToBounds = ll => tweenView({ rotate: [-ll[0], clampTilt(-ll[1]), 0], scale: R0 * Math.max(kOf(), 2), translate: C0 }, 750);
 

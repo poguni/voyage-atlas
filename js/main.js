@@ -129,6 +129,7 @@ const app = {
   onDrill: placeId => drill(placeId),
   // mapId: 클릭한 땅의 장소 ID(도시 별을 누르면 그 도시가 속한 나라·시도)
   onPlace(e, placeId, el, xy, mapId = placeId) {
+    current?.clearSpotlight();
     if ($('quickPaint').checked) return quickPaint({ placeId, el, xy, mapId }, screenOf(e));
     popScreen = screenOf(e);
     openPopover({ placeId, el, xy, mapId }, popScreen, popoverView(placeId));
@@ -137,7 +138,7 @@ const app = {
   // 지구본: 자전 스위치, 팝오버가 열려 있으면 자전을 멈춤
   spin: () => $('spinToggle').checked,
   busy: () => !$('popover').hidden || cinemaOpen(),
-  onBackground: () => closePopover(),
+  onBackground: () => { closePopover(); current?.clearSpotlight(); },
   // 지도에 별로 띄울 위시(아직 방문 전). 세계 지도는 나라·도시, 한국 지도는 시도·시군구
   stars(view) {
     const s = getState();
@@ -395,9 +396,22 @@ async function focusPlace(placeId) {
   await current.ready;
   const t = current.target(placeId);
   if (!t) return;
-  await current.zoomToBounds(t.bounds, current.view === 'korea' ? 3 : 6);
+  await current.zoomToBounds(t.bounds, current.view === 'korea' ? 3 : 6, 0.35, 0.62);
+  // 찾은 곳을 눈에 띄게: 땅은 테두리를 밝히고 나머지를 흐리게, 도시·아주 작은 나라는 고리 표시
+  const around = current.view === 'globe' ? globeBox(t.el) : current.screenBox(t.bounds);
+  const tiny = !around || Math.max(around[1][0] - around[0][0], around[1][1] - around[0][1]) < 24;
+  const city = t.mapId !== placeId;
+  current.spotlight(t, city || tiny);
   popScreen = current.toScreen(t.xy);
-  openPopover({ placeId, el: t.el, xy: t.xy, mapId: t.mapId }, popScreen, popoverView(placeId), { focus: true });
+  openPopover({ placeId, el: t.el, xy: t.xy, mapId: t.mapId }, popScreen, popoverView(placeId),
+    { focus: true, around: city || tiny ? [[popScreen[0], popScreen[1] - 14], [popScreen[0], popScreen[1] + 14]] : around });
+}
+
+// 지구본에서 나라 모양의 화면 영역(너무 넓으면, 예: 해외 영토가 멀리 있는 나라, 쓰지 않음)
+function globeBox(el) {
+  if (!el) return null;
+  const b = el.getBBox();
+  return b.width && b.width < box.clientWidth * 0.6 ? [[b.x, b.y], [b.x + b.width, b.y + b.height]] : null;
 }
 
 // ---------- 시작 ----------

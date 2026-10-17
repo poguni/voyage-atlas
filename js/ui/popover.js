@@ -30,8 +30,8 @@ export const popoverTarget = () => target;
  * @param v       { name, sub, iso2, status: 'visited'|'transit'|'none', count, simple(단순 표시만 있음), wished, desc? }
  * @param focus   키보드로 열었으면 첫 버튼에 포커스
  */
-export function openPopover(t, screen, v, { focus = false } = {}) {
-  target = { ...t, status: v.status, count: v.count, simple: v.simple };
+export function openPopover(t, screen, v, { focus = false, around = t.around } = {}) {
+  target = { ...t, around, status: v.status, count: v.count, simple: v.simple };
   const pop = $('popover');
   const box = pop.parentElement;
   returnFocus = focus ? document.activeElement : null;
@@ -61,10 +61,21 @@ export function openPopover(t, screen, v, { focus = false } = {}) {
   // 위치: 좌우는 상자 안으로, 위쪽 공간이 부족하면 아래로 뒤집기
   const cw = box.clientWidth;
   pop.style.left = Math.max(155, Math.min(cw - 155, screen[0])) + 'px';
-  const below = screen[1] < Math.min(360, box.clientHeight * 0.45);
-  pop.classList.toggle('below', below);
-  pop.style.top = Math.max(8, screen[1]) + 'px';
+  let below = screen[1] < Math.min(360, box.clientHeight * 0.45), y = screen[1];
   pop.hidden = false;
+  // around(검색으로 찾은 곳의 화면 영역): 장소를 가리지 않게 그 위에, 자리가 없으면 아래에 붙임
+  if (around) {
+    const ph = pop.offsetHeight + 18, [[, top], [, bottom]] = around;
+    // 위쪽 도구줄 아래 ~ 아래쪽 탭 바 위(상자 기준 좌표)
+    const bt = box.getBoundingClientRect().top;
+    const minY = (document.querySelector('.topbar')?.getBoundingClientRect().bottom ?? bt) - bt + 8;
+    const maxY = Math.min(box.clientHeight, ($('tabbar')?.getBoundingClientRect().top ?? Infinity) - bt) - 8;
+    if (top - ph >= minY) { below = false; y = top; }
+    else if (bottom + ph <= maxY) { below = true; y = bottom; }
+    else below = y - ph < minY;   // 자리가 없으면 장소 가운데에, 위로 열면 도구줄에 가려질 때만 아래로
+  }
+  pop.classList.toggle('below', below);
+  pop.style.top = Math.max(8, y) + 'px';
   if (focus) $('popMain').focus();
 }
 

@@ -93,12 +93,33 @@ export function createMap(container, o) {
   m.reset = () => run(s => s.call(zoom.transform, d3.zoomIdentity), 700);
 
   // 지도 좌표 영역 [[x0,y0],[x1,y1]]이 화면에 알맞게 보이도록 확대
-  m.zoomToBounds = ([[x0, y0], [x1, y1]], maxK = 6, fill = 0.35) => {
+  // yAt: 장소를 놓을 화면 높이 비율(0.5 = 가운데, 크면 아래로 내려 위쪽에 팝오버 자리를 만듦)
+  m.zoomToBounds = ([[x0, y0], [x1, y1]], maxK = 6, fill = 0.35, yAt = 0.5) => {
     // 팝오버가 장소를 가리지 않도록 화면의 35% 정도만 채웁니다(fill).
     const k = Math.max(1, Math.min(maxK, fill / Math.max((x1 - x0) / w, (y1 - y0) / h)));
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-cx, -cy);
+    const t = d3.zoomIdentity.translate(w / 2, h * yAt).scale(k).translate(-cx, -cy);
     return run(s => s.call(zoom.transform, t), 750);
+  };
+
+  // 검색으로 찾은 곳 강조: 그 땅(같은 ID의 path 전부)을 맨 위로 올려 테두리를 밝히고 다른 땅은 흐리게.
+  // ring이면 장소 좌표에 퍼지는 고리(도시, 화면에서 아주 작은 나라)
+  m.spotlight = ({ el, xy }, ring) => {
+    m.clearSpotlight();
+    if (el) {
+      land.selectAll('path').filter(function () { return this.dataset.id === el.dataset.id; }).attr('data-hit', '').raise();
+      svg.classed('spot', true);
+    }
+    if (ring) {
+      const g = m.pin(fx, xy, 'hit-ring');
+      g.append('circle').attr('class', 'pulse').attr('r', 12);
+      g.append('circle').attr('class', 'hit-dot').attr('r', 5);
+    }
+  };
+  m.clearSpotlight = () => {
+    svg.classed('spot', false);
+    land.selectAll('[data-hit]').attr('data-hit', null);
+    fx.selectAll('.hit-ring').remove();
   };
 
   // 지도 좌표 → 상자 안 화면 좌표(현재 확대 반영)
