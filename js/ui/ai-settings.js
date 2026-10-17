@@ -48,6 +48,7 @@ export async function refreshPrices({ quiet = false } = {}) {
 
 export function initAiSettings() {
   pressMode(getKey() && !keyRemembered() ? 'session' : 'local');
+  $('keyForm').addEventListener('submit', e => e.preventDefault()); // 키 칸에서 Enter를 눌러도 새로 고침되지 않게
   $('keyMode').addEventListener('click', e => { const b = e.target.closest('button[data-mode]'); if (b) pressMode(b.dataset.mode); });
   $('keySave').addEventListener('click', () => {
     const k = $('setKey').value.trim();

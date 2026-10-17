@@ -379,7 +379,8 @@
     </section>
     <section class="set-card gold" id="aiSettings">
       <h3>AI 추천 · OpenRouter</h3>
-      <label class="field"><span>API 키</span><input class="input mono" type="password" id="setKey" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…"></label>
+      <!-- 키 칸만 따로 form에 둡니다. form 밖에 있으면 크롬 비밀번호 관리자가 검색창을 아이디 칸으로 보고 저장된 이메일을 채웁니다. -->
+      <form id="keyForm" autocomplete="off"><label class="field"><span>API 키</span><input class="input mono" type="password" id="setKey" autocomplete="new-password" spellcheck="false" placeholder="sk-or-v1-…"></label></form>
       <div class="set-row"><div class="seg" role="group" aria-label="키 보관 방법" id="keyMode"><button type="button" data-mode="local" aria-pressed="true">이 기기에 저장</button><button type="button" data-mode="session" aria-pressed="false">이번 세션만</button></div></div>
       <div class="row"><button class="btn btn-sm btn-primary" type="button" id="keySave">키 저장</button><button class="btn btn-sm" type="button" id="keyTest">연결 테스트</button><button class="btn btn-sm btn-ghost" type="button" id="keyClear">키 지우기</button></div>
       <p class="set-note" id="keyStatus" role="status"></p>
